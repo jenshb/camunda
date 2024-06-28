@@ -207,9 +207,7 @@ Should describe the motivation for the change. This is optional but encouraged. 
 Camunda is a multi-module Maven project. To **quickly** build all components, run the command: `mvn clean install -Dquickly` in the root folder.
 
 > [!NOTE]
-> All Camunda core modules are built and tested with JDK 21. Most modules use language level
-> 21, exceptions are: zeebe-bpmn-model, zeebe-client-java, zeebe-gateway-protocol,
-> zeebe-gateway-protocol-impl, zeebe-protocol and zeebe-protocol-jackson which use language level 8
+> All Camunda core modules are built and tested with JDK 21. Most modules use language level 21, exceptions are: zeebe-bpmn-model, zeebe-client-java, zeebe-gateway-protocol zeebe-gateway-protocol-impl, zeebe-protocol and zeebe-protocol-jackson which use language level 8
 
 For contributions to Camunda, building quickly is typically sufficient. However, users of Camunda are recommended to build the full distribution.
 
@@ -231,25 +229,28 @@ docker build \
 ```
 
 This is a small overview of the contents of the different modules:
-- `util` contains custom implementations of building blocks like an actor scheduler, buffer allocations, and metrics. Its parts are used in most of the other modules
-- `protocol` contains the SBE definition of the main message protocol
-- `bpmn-model` is a Java API for BPMN process definitions used for parsing etc.
-- `msgpack-*` is a custom msgpack implementation with extensions to evaluate json-path expressions on msgpack objects
-- `dispatcher` is a custom implementation of message passing between threads
-- `service-container` is a custom implementation to manage dependencies between different services
-- `logstreams` is an implementation of an append-only log backed by the filesystem
-- `transport` is our abstraction over network transports
-- `gateway` is the implementation of the gRPC gateway, using our SBE-based protocol to communicate with brokers
-- `gateway-protocol` contains the gRPC definitions for the Zeebe client-to-gateway protocol
-- `zb-db` is our RocksDB wrapper for state management
-- `engine`  is the implementation of the event stream processor
-- `broker` contains the Zeebe broker which is the server side of Zeebe
-- `client-java` contains the Java Zeebe client
-- `atomix` contains transport, membership, and consensus algorithms
-- `benchmark` contains utilities the team uses to run load tests
-- `exporters/elasticsearch-exporter` contains the official Elasticsearch exporter for Zeebe
-- `journal` contains the append-only log used by the consensus algorithm
-- `snapshots` abstracts how state snapshots (i.e. `zb-db`) are handled
+- `.ci` 
+- `.github`
+- `.idea`
+- `.mvn`
+- `authentication`
+- `bom` - bill of materials (BOM) for importing Zeebe dependencies
+- `build-tools` - Zeebe build tools
+- `clients` - client libraries
+- `dist` 
+- `identity` - component within self-managed Camunda 8 responsible for authentication and authorization
+- `licenses`
+- `monitor` - Monitoring for self-managed Camunda 8
+- `operate` - Monitoring tool for monitoring and troubleshooting processes running in Zeebe
+- `parent` - Parent POM for all Zeebe projects
+- `qa` 
+- `search`
+- `service`
+- `spring-boot-starter-sdk` - official SDK for Spring Boot
+- `tasklist` - graphical and API application to manage user tasks in Zeebe
+- `testing` - testing libraries for processes and process applications
+- `webapps-common` 
+- `zeebe` - the process automation engine powering Camunda 8
 
 ### Test Execution
 
