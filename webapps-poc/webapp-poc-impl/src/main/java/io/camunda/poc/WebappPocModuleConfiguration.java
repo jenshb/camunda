@@ -25,7 +25,8 @@ import org.springframework.context.annotation.FullyQualifiedAnnotationBeanNameGe
           pattern = "io\\.camunda\\.poc\\.webapp\\.security\\..*"),
       @ComponentScan.Filter(
           type = FilterType.REGEX,
-          pattern = "io\\.camunda\\.poc\\.webapp\\.management\\..*")
+          pattern = "io\\.camunda\\.poc\\.webapp\\.management\\..*"),
+      @ComponentScan.Filter(type = FilterType.REGEX, pattern = "io\\.camunda\\.webapp\\..*"),
     },
     nameGenerator = FullyQualifiedAnnotationBeanNameGenerator.class)
 @ConditionalOnProperty(
@@ -38,6 +39,6 @@ public class WebappPocModuleConfiguration {
 
   @PostConstruct
   public void logModule() {
-    LOGGER.info("Starting module: webapp");
+    LOGGER.info("Starting module: webapp-poc");
   }
 }
