@@ -37,8 +37,8 @@ inputs:
 
 outputs:
   image:
-    description: "Fully qualified image name available in your local Docker daemon"
-    value: ${{ steps.get-image.outputs.result }}
+    description: "Image ID available in your local Docker daemon"
+    value: ${{ steps.image-build.outputs.imageid }}
   date:
     description: "The ISO 8601 date at which the image was created"
     value: ${{ steps.get-date.outputs.result }}
@@ -88,6 +88,7 @@ runs:
       shell: bash
       run: echo "result=$(realpath --relative-to="${PWD}" ${{ inputs.distball }})" >> $GITHUB_OUTPUT
     - name: Build Docker image
+      id: image-build
       uses: docker/build-push-action@v6
       with:
         context: .
