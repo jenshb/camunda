@@ -80,9 +80,6 @@ runs:
       with:
         images: ${{ inputs.repository }}
         tags: ${{ inputs.version || steps.get-version.outputs.result }}
-    - name: Set Zeebe test image
-      shell: bash
-      run: echo "ZEEBE_TEST_DOCKER_IMAGE=${{ steps.get-image.outputs.result }}" >> $GITHUB_ENV
     - name: Set DISTBALL path relative to the build context
       id: get-distball
       shell: bash
@@ -104,3 +101,6 @@ runs:
           REVISION=${{ inputs.revision != '' && inputs.revision || github.sha }}
           VERSION=${{ inputs.version != '' && inputs.version || steps.get-version.outputs.result }}
         target: app
+    - name: Set Zeebe test image
+      shell: bash
+      run: echo "ZEEBE_TEST_DOCKER_IMAGE=${{ steps.image-build.outputs.imageid }}" >> $GITHUB_ENV
