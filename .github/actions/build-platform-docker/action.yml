@@ -38,7 +38,7 @@ inputs:
 outputs:
   image:
     description: "Image ID available in your local Docker daemon"
-    value: ${{ steps.image-build.outputs.imageid }}
+    value: ${{ steps.get-image.outputs.tags }}
   date:
     description: "The ISO 8601 date at which the image was created"
     value: ${{ steps.get-date.outputs.result }}
@@ -103,4 +103,4 @@ runs:
         target: app
     - name: Set Zeebe test image
       shell: bash
-      run: echo "ZEEBE_TEST_DOCKER_IMAGE=${{ steps.image-build.outputs.imageid }}" >> $GITHUB_ENV
+      run: echo "ZEEBE_TEST_DOCKER_IMAGE=${{ steps.get-image.outputs.tags }}" >> $GITHUB_ENV
