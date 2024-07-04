@@ -1,6 +1,5 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0"
-  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
     <groupId>io.camunda</groupId>
@@ -9,6 +8,7 @@
   </parent>
   <artifactId>webapp-poc-impl</artifactId>
   <name>webapp-poc-impl Maven Webapp</name>
+
   <dependencies>
 
     <dependency>
@@ -125,11 +125,6 @@
     </dependency>
 
     <dependency>
-      <groupId>org.apache.tomcat.embed</groupId>
-      <artifactId>tomcat-embed-websocket</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>com.fasterxml.jackson.core</groupId>
       <artifactId>jackson-annotations</artifactId>
     </dependency>
@@ -137,11 +132,6 @@
     <dependency>
       <groupId>com.fasterxml.jackson.datatype</groupId>
       <artifactId>jackson-datatype-jdk8</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework.session</groupId>
-      <artifactId>spring-session-core</artifactId>
     </dependency>
 
     <dependency>
@@ -170,13 +160,9 @@
     </dependency>
 
     <dependency>
-      <groupId>com.graphql-java-kickstart</groupId>
-      <artifactId>graphql-java-servlet</artifactId>
-    </dependency>
-
-    <dependency>
       <groupId>io.camunda</groupId>
-      <artifactId>webapps-common</artifactId>
+      <artifactId>webapps-webjar</artifactId>
+      <version>8.6.0-SNAPSHOT</version>
     </dependency>
 
     <dependency>
@@ -190,8 +176,8 @@
     </dependency>
 
     <dependency>
-      <groupId>org.springframework.security</groupId>
-      <artifactId>spring-security-crypto</artifactId>
+      <groupId>io.swagger.core.v3</groupId>
+      <artifactId>swagger-annotations-jakarta</artifactId>
     </dependency>
 
     <dependency>
@@ -212,16 +198,6 @@
     <dependency>
       <groupId>org.springframework</groupId>
       <artifactId>spring-core</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>com.google.code.findbugs</groupId>
-      <artifactId>jsr305</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springdoc</groupId>
-      <artifactId>springdoc-openapi-starter-common</artifactId>
     </dependency>
 
     <dependency>
@@ -292,19 +268,8 @@
     </dependency>
 
     <dependency>
-      <groupId>org.hamcrest</groupId>
-      <artifactId>hamcrest</artifactId>
-      <scope>test</scope>
-    </dependency>
-
-    <dependency>
       <groupId>org.apache.commons</groupId>
       <artifactId>commons-collections4</artifactId>
-    </dependency>
-
-    <dependency>
-      <groupId>org.springframework</groupId>
-      <artifactId>spring-aop</artifactId>
     </dependency>
 
     <dependency>
@@ -319,12 +284,12 @@
 
     <dependency>
       <groupId>io.camunda</groupId>
-      <artifactId>identity-sdk</artifactId>
+      <artifactId>webapps-common</artifactId>
     </dependency>
 
     <dependency>
-      <groupId>org.apache.lucene</groupId>
-      <artifactId>lucene-core</artifactId>
+      <groupId>io.camunda</groupId>
+      <artifactId>identity-sdk</artifactId>
     </dependency>
 
     <!-- TEST -->
@@ -340,7 +305,45 @@
     </dependency>
 
   </dependencies>
+
   <build>
     <finalName>webapp-poc-impl</finalName>
+
+    <plugins>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-dependency-plugin</artifactId>
+        <configuration>
+          <usedDependencies>
+            <dependency>io.camunda:identity-spring-boot-starter</dependency>
+            <dependency>io.camunda:webapps-webjar</dependency>
+            <dependency>io.camunda:webapps-common</dependency>
+            <dependency>org.springframework.boot:spring-boot-starter-web</dependency>
+            <dependency>org.springframework.boot:spring-boot-starter-validation</dependency>
+            <dependency>org.springframework.boot:spring-boot-starter-log4j2</dependency>
+            <dependency>org.springframework.boot:spring-boot-starter-security</dependency>
+            <dependency>org.springframework.boot:spring-boot-starter-oauth2-resource-server</dependency>
+            <dependency>org.springframework.boot:spring-boot-starter-thymeleaf</dependency>
+            <dependency>org.springframework.boot:spring-boot-starter-actuator</dependency>
+            <dependency>org.springdoc:springdoc-openapi-starter-webmvc-ui</dependency>
+            <dependency>org.springframework.session:spring-session-data-redis</dependency>
+            <dependency>org.thymeleaf:thymeleaf</dependency>
+            <dependency>jakarta.json:jakarta.json-api</dependency>
+            <dependency>io.micrometer:micrometer-registry-prometheus-simpleclient</dependency>
+          </usedDependencies>
+          <ignoredUnusedDeclaredDependencies>
+            <dep>jakarta.servlet:jakarta.servlet-api</dep>
+            <dep>jakarta.annotation:jakarta.annotation-api</dep>
+            <dep>com.nimbusds:nimbus-jose-jwt</dep>
+            <dep>org.springframework:spring-aspects</dep>
+          </ignoredUnusedDeclaredDependencies>
+          <ignoredNonTestScopedDependencies>
+            <dependency>com.fasterxml.jackson.datatype:jackson-datatype-jdk8</dependency>
+            <dependency>com.fasterxml.jackson.datatype:jackson-datatype-jsr310</dependency>
+          </ignoredNonTestScopedDependencies>
+        </configuration>
+      </plugin>
+
+    </plugins>
   </build>
 </project>

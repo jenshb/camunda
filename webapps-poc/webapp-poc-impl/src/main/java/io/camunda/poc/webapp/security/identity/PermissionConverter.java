@@ -16,7 +16,7 @@ public final class PermissionConverter implements Converter<String, Permission> 
   public static final String WRITE_PERMISSION_VALUE = "write:*";
 
   private static volatile PermissionConverter instance;
-  private static final Object lock = new Object();
+  private static final Object LOCK = new Object();
 
   private PermissionConverter() {
     // private constructor
@@ -24,7 +24,7 @@ public final class PermissionConverter implements Converter<String, Permission> 
 
   public static PermissionConverter getInstance() {
     if (instance == null) {
-      synchronized (lock) {
+      synchronized (LOCK) {
         if (instance == null) {
           instance = new PermissionConverter();
         }
