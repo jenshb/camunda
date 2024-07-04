@@ -22,7 +22,7 @@ public enum Profile {
   OPERATE("operate"),
   TASKLIST("tasklist"),
   IDENTITY("identity"),
-  WEBAPPS("webapps-poc"),
+  WEBAPPS("webappspoc"),
 
   // environment profiles
   TEST("test"),

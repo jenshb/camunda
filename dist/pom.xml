@@ -181,6 +181,11 @@
 
     <dependency>
       <groupId>io.camunda</groupId>
+      <artifactId>webapps-webjar</artifactId>
+    </dependency>
+
+    <dependency>
+      <groupId>io.camunda</groupId>
       <artifactId>tasklist-common</artifactId>
     </dependency>
 

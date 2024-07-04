@@ -46,16 +46,27 @@ public class ClientConfig {
   @Value("${CAMUNDA_WEBAPPS_IDENTITY_USER_ACCESS_RESTRICTIONS_ENABLED:#{true}}")
   public boolean isUserAccessRestrictionsEnabled;
 
+  @Value("${spring.profiles.active}")
+  public String profiles;
+
   // @Autowired private TasklistProfileService profileService;
   @Autowired private WebAppsPocProperties webAppsPocProperties;
   @Autowired private ServletContext context;
+
+  public String getProfiles() {
+    return profiles;
+  }
+
+  public void setProfiles(final String profiles) {
+    this.profiles = profiles;
+  }
 
   @PostConstruct
   public void init() {
     isEnterprise = webAppsPocProperties.isEnterprise();
     isMultiTenancyEnabled = webAppsPocProperties.getMultiTenancy().isEnabled();
     contextPath = context.getContextPath();
-    baseName = context.getContextPath() + "/tasklist";
+    baseName = context.getContextPath() + "/webapps";
     // canLogout = profileService.currentProfileCanLogout();
     // isLoginDelegated = profileService.isLoginDelegated();
   }
