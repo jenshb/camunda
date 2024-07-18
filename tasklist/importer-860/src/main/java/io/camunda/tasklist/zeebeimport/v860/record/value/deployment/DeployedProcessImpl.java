@@ -54,6 +54,11 @@ public class DeployedProcessImpl implements Process {
     return isDuplicate;
   }
 
+  @Override
+  public long getDeploymentKey() {
+    return 0; // TODO
+  }
+
   public void setDuplicate(final boolean duplicate) {
     isDuplicate = duplicate;
   }

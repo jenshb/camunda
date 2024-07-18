@@ -50,34 +50,17 @@ public class DeployedProcessImpl implements Process {
   }
 
   @Override
-  public byte[] getResource() {
-    return resource;
-  }
-
-  @Override
   public boolean isDuplicate() {
     return isDuplicate;
   }
 
   @Override
-  public String getTenantId() {
-    return tenantId;
+  public long getDeploymentKey() {
+    return 0; // TODO
   }
 
-  public void setResourceName(String resourceName) {
-    this.resourceName = resourceName;
-  }
-
-  public void setProcessDefinitionKey(long processDefinitionKey) {
-    this.processDefinitionKey = processDefinitionKey;
-  }
-
-  public void setVersion(int version) {
-    this.version = version;
-  }
-
-  public void setBpmnProcessId(String bpmnProcessId) {
-    this.bpmnProcessId = bpmnProcessId;
+  public void setDuplicate(final boolean duplicate) {
+    isDuplicate = duplicate;
   }
 
   public DeployedProcessImpl setChecksum(final byte[] checksum) {
@@ -85,22 +68,54 @@ public class DeployedProcessImpl implements Process {
     return this;
   }
 
+  public void setResourceName(final String resourceName) {
+    this.resourceName = resourceName;
+  }
+
+  public void setProcessDefinitionKey(final long processDefinitionKey) {
+    this.processDefinitionKey = processDefinitionKey;
+  }
+
+  public void setVersion(final int version) {
+    this.version = version;
+  }
+
+  public void setBpmnProcessId(final String bpmnProcessId) {
+    this.bpmnProcessId = bpmnProcessId;
+  }
+
+  @Override
+  public byte[] getResource() {
+    return resource;
+  }
+
   public DeployedProcessImpl setResource(final byte[] resource) {
     this.resource = resource;
     return this;
   }
 
-  public void setDuplicate(final boolean duplicate) {
-    isDuplicate = duplicate;
+  @Override
+  public String getTenantId() {
+    return tenantId;
   }
 
-  public void setTenantId(String tenantId) {
+  public void setTenantId(final String tenantId) {
     this.tenantId = tenantId;
   }
 
   @Override
   public String toJson() {
     throw new UnsupportedOperationException("toJson operation is not supported");
+  }
+
+  @Override
+  public int hashCode() {
+    int result =
+        Objects.hash(
+            bpmnProcessId, resourceName, processDefinitionKey, version, isDuplicate, tenantId);
+    result = 31 * result + Arrays.hashCode(checksum);
+    result = 31 * result + Arrays.hashCode(resource);
+    return result;
   }
 
   @Override
@@ -120,16 +135,6 @@ public class DeployedProcessImpl implements Process {
         && Objects.equals(tenantId, that.tenantId)
         && Arrays.equals(checksum, that.checksum)
         && Arrays.equals(resource, that.resource);
-  }
-
-  @Override
-  public int hashCode() {
-    int result =
-        Objects.hash(
-            bpmnProcessId, resourceName, processDefinitionKey, version, isDuplicate, tenantId);
-    result = 31 * result + Arrays.hashCode(checksum);
-    result = 31 * result + Arrays.hashCode(resource);
-    return result;
   }
 
   @Override
