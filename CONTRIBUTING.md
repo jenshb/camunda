@@ -11,6 +11,11 @@ For community-maintained Camunda projects, please visit the [Camunda Community H
   - [Code of Conduct](#code-of-conduct)
 - [GitHub issue guidelines](#github-issue-guidelines)
   - [Starting on an issue](#starting-on-an-issue)
+- [Build Camunda from source](#build-camunda-from-source)
+  - [Build Zeebe](#build-zeebe)
+  - [Test execution](#test-execution)
+    - [Test troubleshooting](#test-troubleshooting)
+  - [Build profiling](#build-profiling)
 - [Creating a pull request](#creating-a-pull-request)
 - [Reviewing a pull request](#reviewing-a-pull-request)
   - [Review emoji code](#review-emoji-code)
@@ -19,10 +24,6 @@ For community-maintained Camunda projects, please visit the [Camunda Community H
 - [Commit message guidelines](#commit-message-guidelines)
   - [Commit message header](#commit-message-header)
   - [Commit message body](#commit-message-body)
-- [Build Camunda from source](#build-camunda-from-source)
-  - [Test Execution](#test-execution)
-    - [Test Troubleshooting](#test-troubleshooting)
-  - [Build profiling](#build-profiling)
 
 ## Prerequisites
 ### Contributor License Agreement
@@ -85,6 +86,86 @@ The `main` branch contains the current in-development state of the project. To w
    ```
    git push --force-with-lease
    ```
+
+## Build Camunda from source
+We are currently working on [architecture streamlining](https://camunda.com/blog/2024/04/simplified-deployment-options-accelerated-getting-started-experience/) to simplify the deployment and build process. While this is in progress, each component has its own build instructions. 
+
+> [!NOTE]
+> Zeebe is necessary for all components except Identity.
+
+Build instructions by component:
+* [Zeebe](#build-zeebe) (below)
+* [Operate](operate/README.md)
+* [Tasklist](tasklist/README.md)
+* Identity - coming soon
+* Optimize - coming soon
+
+### Build Zeebe
+Zeebe is a multi-module Maven project. To **quickly** build all components, run the command: `mvn clean install -Dquickly` in the root folder.
+
+> [!NOTE]
+> All Camunda core modules are built and tested with JDK 21. Most modules use language level 21, exceptions are: zeebe-bpmn-model, zeebe-client-java, zeebe-gateway-protocol zeebe-gateway-protocol-impl, zeebe-protocol and zeebe-protocol-jackson which use language level 8
+
+For contributions to Camunda, building quickly is typically sufficient. However, users are recommended to build the full distribution.
+
+To fully build the Zeebe distribution, run the command: `mvn clean install -DskipTests` in the root folder. This is slightly slower than building quickly but ensures the distribution is assembled completely. The resulting Zeebe distribution can be found in the folder `dist/target`, i.e.
+
+```
+dist/target/camunda-zeebe-X.Y.Z-SNAPSHOT.tar.gz
+dist/target/camunda-zeebe-X.Y.Z-SNAPSHOT.zip
+```
+
+This distribution can be containerized with Docker (i.e. build a Docker image) by running:
+
+```
+docker build \
+  --tag camunda/zeebe:local \
+  --build-arg DISTBALL='dist/target/camunda-zeebe*.tar.gz' \
+  --target app \
+  .
+```
+
+This is a small overview of the contents of the different modules:
+- `.ci` 
+- `.github`
+- `.idea`
+- `.mvn`
+- `authentication`
+- `bom` - bill of materials (BOM) for importing Zeebe dependencies
+- `build-tools` - Zeebe build tools
+- `clients` - client libraries
+- `dist` 
+- `identity` - component within self-managed Camunda 8 responsible for authentication and authorization
+- `licenses`
+- `monitor` - Monitoring for self-managed Camunda 8
+- `operate` - Monitoring tool for monitoring and troubleshooting processes running in Zeebe
+- `parent` - Parent POM for all Zeebe projects
+- `qa` 
+- `search`
+- `service`
+- `spring-boot-starter-sdk` - official SDK for Spring Boot
+- `tasklist` - graphical and API application to manage user tasks in Zeebe
+- `testing` - testing libraries for processes and process applications
+- `webapps-common` 
+- `zeebe` - the process automation engine powering Camunda 8
+
+### Test execution
+
+Tests can be executed via Maven (`mvn verify`) or in your preferred IDE. The Zeebe Team uses mostly [Intellij IDEA](https://www.jetbrains.com/idea/), where we also [provide settings for](https://github.com/camunda/camunda/tree/main/.idea).
+
+> [!TIP]
+> To execute the tests quickly, run `mvn verify -Dquickly -DskipTests=false`.
+> The tests will be skipped when using `-Dquickly` without `-DskipTests=false`.
+
+#### Test troubleshooting
+
+- If you encounter issues (like `java.lang.UnsatisfiedLinkError: failed to load the required native library`) while running the test StandaloneGatewaySecurityTest.shouldStartWithTlsEnabled take a look at https://github.com/camunda/camunda/issues/10488 to resolve it.
+
+### Build profiling
+
+The development team continues to push for a performant build.
+To investigate where the time is spent, you can run your Maven command with the `-Dprofile` option.
+This will generate a profiler report in the `target` folder.
 
 ## Creating a pull request
 
@@ -202,73 +283,6 @@ The commit header should be kept short, preferably under 72 chars but we allow a
 Should describe the motivation for the change. This is optional but encouraged. Good commit messages explain what changed AND why you changed it. See [I've written a clear changelist description](https://github.com/camunda/camunda/wiki/Pull-Requests-and-Code-Reviews#ive-written-a-clear-changelist-description).
 
 
-## Build Camunda from source
-
-Camunda is a multi-module Maven project. To **quickly** build all components, run the command: `mvn clean install -Dquickly` in the root folder.
-
-> [!NOTE]
-> All Camunda core modules are built and tested with JDK 21. Most modules use language level 21, exceptions are: zeebe-bpmn-model, zeebe-client-java, zeebe-gateway-protocol zeebe-gateway-protocol-impl, zeebe-protocol and zeebe-protocol-jackson which use language level 8
-
-For contributions to Camunda, building quickly is typically sufficient. However, users of Camunda are recommended to build the full distribution.
-
-To fully build the Zeebe distribution, run the command: `mvn clean install -DskipTests` in the root folder. This is slightly slower than building quickly but ensures the distribution is assembled completely. The resulting Zeebe distribution can be found in the folder `dist/target`, i.e.
-
-```
-dist/target/camunda-zeebe-X.Y.Z-SNAPSHOT.tar.gz
-dist/target/camunda-zeebe-X.Y.Z-SNAPSHOT.zip
-```
-
-This distribution can be containerized with Docker (i.e. build a Docker image) by running:
-
-```
-docker build \
-  --tag camunda/zeebe:local \
-  --build-arg DISTBALL='dist/target/camunda-zeebe*.tar.gz' \
-  --target app \
-  .
-```
-
-This is a small overview of the contents of the different modules:
-- `.ci` 
-- `.github`
-- `.idea`
-- `.mvn`
-- `authentication`
-- `bom` - bill of materials (BOM) for importing Zeebe dependencies
-- `build-tools` - Zeebe build tools
-- `clients` - client libraries
-- `dist` 
-- `identity` - component within self-managed Camunda 8 responsible for authentication and authorization
-- `licenses`
-- `monitor` - Monitoring for self-managed Camunda 8
-- `operate` - Monitoring tool for monitoring and troubleshooting processes running in Zeebe
-- `parent` - Parent POM for all Zeebe projects
-- `qa` 
-- `search`
-- `service`
-- `spring-boot-starter-sdk` - official SDK for Spring Boot
-- `tasklist` - graphical and API application to manage user tasks in Zeebe
-- `testing` - testing libraries for processes and process applications
-- `webapps-common` 
-- `zeebe` - the process automation engine powering Camunda 8
-
-### Test Execution
-
-Tests can be executed via Maven (`mvn verify`) or in your preferred IDE. The Zeebe Team uses mostly [Intellij IDEA](https://www.jetbrains.com/idea/), where we also [provide settings for](https://github.com/camunda/camunda/tree/main/.idea).
-
-> [!TIP]
-> To execute the tests quickly, run `mvn verify -Dquickly -DskipTests=false`.
-> The tests will be skipped when using `-Dquickly` without `-DskipTests=false`.
-
-#### Test Troubleshooting
-
-- If you encounter issues (like `java.lang.UnsatisfiedLinkError: failed to load the required native library`) while running the test StandaloneGatewaySecurityTest.shouldStartWithTlsEnabled take a look at https://github.com/camunda/camunda/issues/10488 to resolve it.
-
-### Build profiling
-
-The development team continues to push for a performant build.
-To investigate where the time is spent, you can run your Maven command with the `-Dprofile` option.
-This will generate a profiler report in the `target` folder.
 
 [issues]: https://github.com/camunda/camunda/issues
 [forum]: https://forum.camunda.io/
