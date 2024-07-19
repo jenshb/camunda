@@ -52,6 +52,8 @@ public final class DbProcessState implements MutableProcessState {
   private final ProcessRecord processRecordForDeployments = new ProcessRecord();
   private final Cache<TenantIdAndProcessIdAndVersion, DeployedProcess>
       processesByTenantAndProcessIdAndVersionCache;
+  private final Cache<TenantIdAndProcessIdAndDeploymentKey, DeployedProcess>
+      processesByTenantAndProcessIdAndDeploymentKeyCache;
   private final Cache<TenantIdAndProcessDefinitionKey, DeployedProcess> processByTenantAndKeyCache;
 
   /** [tenant id | process definition key] => process */
@@ -76,6 +78,12 @@ public final class DbProcessState implements MutableProcessState {
   private final ColumnFamily<DbForeignKey<DbTenantAwareKey<DbString>>, Digest>
       digestByIdColumnFamily;
   private final Digest digest = new Digest();
+
+  private final DbLong deploymentKey;
+  private final DbTenantAwareKey<DbCompositeKey<DbString, DbLong>>
+      tenantAwareProcessIdAndDeploymentKey;
+  private final ColumnFamily<DbTenantAwareKey<DbCompositeKey<DbString, DbLong>>, PersistedProcess>
+      processByIdAndDeploymentKeyColumnFamily;
 
   private final VersionManager versionManager;
 
@@ -120,6 +128,17 @@ public final class DbProcessState implements MutableProcessState {
             fkTenantAwareProcessId,
             digest);
 
+    deploymentKey = new DbLong();
+    tenantAwareProcessIdAndDeploymentKey =
+        new DbTenantAwareKey<>(
+            tenantIdKey, new DbCompositeKey<>(processId, deploymentKey), PlacementType.PREFIX);
+    processByIdAndDeploymentKeyColumnFamily =
+        zeebeDb.createColumnFamily(
+            ZbColumnFamilies.PROCESS_CACHE_BY_ID_AND_DEPLOYMENT_KEY,
+            transactionContext,
+            tenantAwareProcessIdAndDeploymentKey,
+            persistedProcess);
+
     processByTenantAndKeyCache =
         CacheBuilder.newBuilder().maximumSize(config.getProcessCacheCapacity()).build();
 
@@ -127,6 +146,10 @@ public final class DbProcessState implements MutableProcessState {
         new VersionManager(
             DEFAULT_VERSION_VALUE, zeebeDb, ZbColumnFamilies.PROCESS_VERSION, transactionContext);
     processesByTenantAndProcessIdAndVersionCache =
+        CacheBuilder.newBuilder().maximumSize(config.getProcessCacheCapacity()).build();
+
+    // TODO no extra cache needed if just reference by key
+    processesByTenantAndProcessIdAndDeploymentKeyCache =
         CacheBuilder.newBuilder().maximumSize(config.getProcessCacheCapacity()).build();
   }
 
@@ -177,9 +200,11 @@ public final class DbProcessState implements MutableProcessState {
     processDefinitionKey.wrapLong(processRecord.getProcessDefinitionKey());
     processId.wrapString(processRecord.getBpmnProcessId());
     processVersion.wrapLong(processRecord.getVersion());
+    deploymentKey.wrapLong(processRecord.getDeploymentKey());
 
     processColumnFamily.deleteExisting(tenantAwareProcessDefinitionKey);
     processByIdAndVersionColumnFamily.deleteExisting(tenantAwareProcessIdAndVersionKey);
+    processByIdAndDeploymentKeyColumnFamily.deleteExisting(tenantAwareProcessIdAndDeploymentKey);
 
     final var tenantIdAndProcessIdAndVersion =
         new TenantIdAndProcessIdAndVersion(
@@ -187,6 +212,14 @@ public final class DbProcessState implements MutableProcessState {
             processRecord.getBpmnProcessIdBuffer(),
             processRecord.getVersion());
     processesByTenantAndProcessIdAndVersionCache.invalidate(tenantIdAndProcessIdAndVersion);
+
+    final var tenantIdAndProcessIdAndDeploymentKey =
+        new TenantIdAndProcessIdAndDeploymentKey(
+            processRecord.getTenantId(),
+            processRecord.getBpmnProcessIdBuffer(),
+            processRecord.getDeploymentKey());
+    processesByTenantAndProcessIdAndDeploymentKeyCache.invalidate(
+        tenantIdAndProcessIdAndDeploymentKey);
 
     final var key =
         new TenantIdAndProcessDefinitionKey(
@@ -216,8 +249,13 @@ public final class DbProcessState implements MutableProcessState {
 
     processId.wrapBuffer(processRecord.getBpmnProcessIdBuffer());
     processVersion.wrapLong(processRecord.getVersion());
+    deploymentKey.wrapLong(processRecord.getDeploymentKey());
 
     processByIdAndVersionColumnFamily.upsert(tenantAwareProcessIdAndVersionKey, persistedProcess);
+
+    // TODO only use key
+    processByIdAndDeploymentKeyColumnFamily.insert(
+        tenantAwareProcessIdAndDeploymentKey, persistedProcess);
   }
 
   private void updateLatestVersion(final ProcessRecord processRecord) {
@@ -279,9 +317,14 @@ public final class DbProcessState implements MutableProcessState {
     final var tenantIdAndProcessIdAndVersion =
         new TenantIdAndProcessIdAndVersion(
             deployedProcess.getTenantId(), bpmnProcessId, deployedProcess.getVersion());
-
     processesByTenantAndProcessIdAndVersionCache.put(
         tenantIdAndProcessIdAndVersion, deployedProcess);
+
+    final var tenantIdAndProcessIdAndDeploymentKey =
+        new TenantIdAndProcessIdAndDeploymentKey(
+            deployedProcess.getTenantId(), bpmnProcessId, deployedProcess.getDeploymentKey());
+    processesByTenantAndProcessIdAndDeploymentKeyCache.put(
+        tenantIdAndProcessIdAndDeploymentKey, deployedProcess);
   }
 
   @Override
@@ -310,6 +353,21 @@ public final class DbProcessState implements MutableProcessState {
 
     if (cachedProcess == null) {
       return lookupPersistenceState(processId, version, tenantId);
+    }
+    return cachedProcess;
+  }
+
+  @Override
+  public DeployedProcess getProcessByProcessIdAndDeploymentKey(
+      final DirectBuffer processId, final long deploymentKey, final String tenantId) {
+    final var tenantIdAndProcessIdAndDeploymentKey =
+        new TenantIdAndProcessIdAndDeploymentKey(tenantId, processId, deploymentKey);
+    final var cachedProcess =
+        processesByTenantAndProcessIdAndDeploymentKeyCache.getIfPresent(
+            tenantIdAndProcessIdAndDeploymentKey);
+
+    if (cachedProcess == null) {
+      return lookupPersistenceState(processId, deploymentKey, tenantId);
     }
     return cachedProcess;
   }
@@ -382,6 +440,7 @@ public final class DbProcessState implements MutableProcessState {
   public void clearCache() {
     processByTenantAndKeyCache.invalidateAll();
     processesByTenantAndProcessIdAndVersionCache.invalidateAll();
+    processesByTenantAndProcessIdAndDeploymentKeyCache.invalidateAll();
     versionManager.clear();
   }
 
@@ -422,6 +481,30 @@ public final class DbProcessState implements MutableProcessState {
     return null;
   }
 
+  private DeployedProcess lookupPersistenceState(
+      final DirectBuffer processIdBuffer, final long deploymentKey, final String tenantId) {
+    tenantIdKey.wrapString(tenantId);
+    processId.wrapBuffer(processIdBuffer);
+    this.deploymentKey.wrapLong(deploymentKey);
+
+    final var process =
+        processByIdAndDeploymentKeyColumnFamily.get(tenantAwareProcessIdAndDeploymentKey);
+
+    if (process != null) {
+      updateInMemoryState(process);
+
+      final var tenantIdAndProcessIdAndDeploymentKey =
+          new TenantIdAndProcessIdAndDeploymentKey(tenantId, processIdBuffer, deploymentKey);
+
+      // return the cached copy
+      return processesByTenantAndProcessIdAndDeploymentKeyCache.getIfPresent(
+          tenantIdAndProcessIdAndDeploymentKey);
+    }
+
+    // does not exist in persistence and in memory state
+    return null;
+  }
+
   private DeployedProcess lookupPersistenceStateForProcessByKey(
       final long processDefinitionKey, final String tenantId) {
     tenantIdKey.wrapString(tenantId);
@@ -440,6 +523,9 @@ public final class DbProcessState implements MutableProcessState {
   }
 
   record TenantIdAndProcessIdAndVersion(String tenantId, DirectBuffer processId, long Version) {}
+
+  record TenantIdAndProcessIdAndDeploymentKey(
+      String tenantId, DirectBuffer processId, long deploymentKey) {}
 
   record TenantIdAndProcessDefinitionKey(String tenantId, long processDefinitionKey) {}
 }
