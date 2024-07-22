@@ -171,7 +171,9 @@ public enum ZbColumnFamilies implements EnumValue {
   USER_TASK_STATES(80),
   COMPENSATION_SUBSCRIPTION(81),
 
-  PROCESS_CACHE_BY_ID_AND_DEPLOYMENT_KEY(82); // TODO move to top?
+  // TODO move to top?
+  PROCESS_CACHE_BY_ID_AND_DEPLOYMENT_KEY(82),
+  DMN_DECISION_KEY_BY_DECISION_ID_AND_DEPLOYMENT_KEY(83);
 
   private final int value;
 
