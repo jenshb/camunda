@@ -5,7 +5,7 @@
  * Licensed under the Camunda License 1.0. You may not use this file
  * except in compliance with the Camunda License 1.0.
  */
-package io.camunda.optimize.dto.optimize.query.event.process;
+package io.camunda.optimize.dto.optimize.query.process;
 
 import static io.camunda.optimize.service.util.importing.EngineConstants.FLOW_NODE_TYPE_USER_TASK;
 
@@ -115,7 +115,7 @@ public class FlowNodeInstanceDto implements Serializable, OptimizeDto {
     this.engine = engine;
     this.flowNodeId = flowNodeId;
     this.flowNodeInstanceId = flowNodeInstanceId;
-    this.flowNodeType = FLOW_NODE_TYPE_USER_TASK;
+    flowNodeType = FLOW_NODE_TYPE_USER_TASK;
     this.userTaskInstanceId = userTaskInstanceId;
   }
 
@@ -128,7 +128,7 @@ public class FlowNodeInstanceDto implements Serializable, OptimizeDto {
     this.processInstanceId = processInstanceId;
     this.definitionKey = definitionKey;
     this.engine = engine;
-    this.flowNodeType = FLOW_NODE_TYPE_USER_TASK;
+    flowNodeType = FLOW_NODE_TYPE_USER_TASK;
     this.userTaskInstanceId = userTaskInstanceId;
   }
 }

@@ -10,7 +10,6 @@ package io.camunda.optimize.service.importing.engine.service;
 import io.camunda.optimize.dto.engine.HistoricActivityInstanceEngineDto;
 import io.camunda.optimize.dto.optimize.importing.FlowNodeEventDto;
 import io.camunda.optimize.rest.engine.EngineContext;
-import io.camunda.optimize.service.CamundaEventImportService;
 import io.camunda.optimize.service.db.DatabaseClient;
 import io.camunda.optimize.service.db.writer.activity.CompletedActivityInstanceWriter;
 import io.camunda.optimize.service.importing.DatabaseImportJob;
@@ -27,17 +26,15 @@ import lombok.extern.slf4j.Slf4j;
 public class CompletedActivityInstanceImportService
     implements ImportService<HistoricActivityInstanceEngineDto> {
 
+  protected EngineContext engineContext;
   private final DatabaseImportJobExecutor databaseImportJobExecutor;
   private final CompletedActivityInstanceWriter completedActivityInstanceWriter;
-  private final CamundaEventImportService camundaEventService;
   private final ProcessDefinitionResolverService processDefinitionResolverService;
   private final ConfigurationService configurationService;
   private final DatabaseClient databaseClient;
-  protected EngineContext engineContext;
 
   public CompletedActivityInstanceImportService(
       final CompletedActivityInstanceWriter completedActivityInstanceWriter,
-      final CamundaEventImportService camundaEventService,
       final EngineContext engineContext,
       final ConfigurationService configurationService,
       final ProcessDefinitionResolverService processDefinitionResolverService,
@@ -46,7 +43,6 @@ public class CompletedActivityInstanceImportService
         new DatabaseImportJobExecutor(getClass().getSimpleName(), configurationService);
     this.engineContext = engineContext;
     this.completedActivityInstanceWriter = completedActivityInstanceWriter;
-    this.camundaEventService = camundaEventService;
     this.processDefinitionResolverService = processDefinitionResolverService;
     this.configurationService = configurationService;
     this.databaseClient = databaseClient;
@@ -90,11 +86,7 @@ public class CompletedActivityInstanceImportService
       final List<FlowNodeEventDto> events, final Runnable callback) {
     final CompletedActivityInstanceDatabaseImportJob activityImportJob =
         new CompletedActivityInstanceDatabaseImportJob(
-            completedActivityInstanceWriter,
-            camundaEventService,
-            configurationService,
-            callback,
-            databaseClient);
+            completedActivityInstanceWriter, configurationService, callback, databaseClient);
     activityImportJob.setEntitiesToImport(events);
     return activityImportJob;
   }

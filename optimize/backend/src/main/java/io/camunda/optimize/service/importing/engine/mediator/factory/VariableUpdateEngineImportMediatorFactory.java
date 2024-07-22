@@ -27,7 +27,6 @@ import org.springframework.stereotype.Component;
 @Component
 public class VariableUpdateEngineImportMediatorFactory extends AbstractEngineImportMediatorFactory {
 
-  private final CamundaEventImportServiceFactory camundaEventImportServiceFactory;
   private final ProcessVariableUpdateWriter variableWriter;
   private final VariableImportAdapterProvider variableImportAdapterProvider;
   private final ProcessDefinitionResolverService processDefinitionResolverService;
@@ -37,14 +36,12 @@ public class VariableUpdateEngineImportMediatorFactory extends AbstractEngineImp
       final BeanFactory beanFactory,
       final ImportIndexHandlerRegistry importIndexHandlerRegistry,
       final ConfigurationService configurationService,
-      final CamundaEventImportServiceFactory camundaEventImportServiceFactory,
       final ProcessVariableUpdateWriter variableWriter,
       final VariableImportAdapterProvider variableImportAdapterProvider,
       final ProcessDefinitionResolverService processDefinitionResolverService,
       final ObjectVariableService objectVariableService,
       final DatabaseClient databaseClient) {
     super(beanFactory, importIndexHandlerRegistry, configurationService, databaseClient);
-    this.camundaEventImportServiceFactory = camundaEventImportServiceFactory;
     this.variableWriter = variableWriter;
     this.variableImportAdapterProvider = variableImportAdapterProvider;
     this.processDefinitionResolverService = processDefinitionResolverService;
@@ -66,7 +63,6 @@ public class VariableUpdateEngineImportMediatorFactory extends AbstractEngineImp
             configurationService,
             variableImportAdapterProvider,
             variableWriter,
-            camundaEventImportServiceFactory.createCamundaEventService(engineContext),
             engineContext,
             processDefinitionResolverService,
             objectVariableService,

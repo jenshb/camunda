@@ -29,13 +29,11 @@ import org.springframework.stereotype.Component;
 @Component
 public class ActivityInstanceEngineImportMediatorFactory
     extends AbstractEngineImportMediatorFactory {
-  private final CamundaEventImportServiceFactory camundaEventImportServiceFactory;
   private final CompletedActivityInstanceWriter completedActivityInstanceWriter;
   private final RunningActivityInstanceWriter runningActivityInstanceWriter;
   private final ProcessDefinitionResolverService processDefinitionResolverService;
 
   public ActivityInstanceEngineImportMediatorFactory(
-      final CamundaEventImportServiceFactory camundaEventImportServiceFactory,
       final CompletedActivityInstanceWriter completedActivityInstanceWriter,
       final RunningActivityInstanceWriter runningActivityInstanceWriter,
       final BeanFactory beanFactory,
@@ -44,7 +42,6 @@ public class ActivityInstanceEngineImportMediatorFactory
       final ProcessDefinitionResolverService processDefinitionResolverService,
       final DatabaseClient databaseClient) {
     super(beanFactory, importIndexHandlerRegistry, configurationService, databaseClient);
-    this.camundaEventImportServiceFactory = camundaEventImportServiceFactory;
     this.completedActivityInstanceWriter = completedActivityInstanceWriter;
     this.runningActivityInstanceWriter = runningActivityInstanceWriter;
     this.processDefinitionResolverService = processDefinitionResolverService;
@@ -58,7 +55,7 @@ public class ActivityInstanceEngineImportMediatorFactory
   }
 
   private CompletedActivityInstanceEngineImportMediator
-      createCompletedActivityInstanceEngineImportMediator(EngineContext engineContext) {
+      createCompletedActivityInstanceEngineImportMediator(final EngineContext engineContext) {
 
     return new CompletedActivityInstanceEngineImportMediator(
         importIndexHandlerRegistry.getCompletedActivityInstanceImportIndexHandler(
@@ -66,7 +63,6 @@ public class ActivityInstanceEngineImportMediatorFactory
         beanFactory.getBean(CompletedActivityInstanceFetcher.class, engineContext),
         new CompletedActivityInstanceImportService(
             completedActivityInstanceWriter,
-            camundaEventImportServiceFactory.createCamundaEventService(engineContext),
             engineContext,
             configurationService,
             processDefinitionResolverService,
@@ -76,14 +72,13 @@ public class ActivityInstanceEngineImportMediatorFactory
   }
 
   private RunningActivityInstanceEngineImportMediator
-      createRunningActivityInstanceEngineImportMediator(EngineContext engineContext) {
+      createRunningActivityInstanceEngineImportMediator(final EngineContext engineContext) {
     return new RunningActivityInstanceEngineImportMediator(
         importIndexHandlerRegistry.getRunningActivityInstanceImportIndexHandler(
             engineContext.getEngineAlias()),
         beanFactory.getBean(RunningActivityInstanceFetcher.class, engineContext),
         new RunningActivityInstanceImportService(
             runningActivityInstanceWriter,
-            camundaEventImportServiceFactory.createCamundaEventService(engineContext),
             engineContext,
             configurationService,
             processDefinitionResolverService,

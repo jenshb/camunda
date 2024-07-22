@@ -30,10 +30,9 @@ public class ProcessDefinitionOptimizeDto extends DefinitionOptimizeResponseDto 
   private List<FlowNodeDataDto> flowNodeData = new ArrayList<>();
   private Map<String, String> userTaskNames = new HashMap<>();
   private boolean onboarded = false;
-  @JsonIgnore private boolean eventBased;
 
   public ProcessDefinitionOptimizeDto() {
-    this.setType(DefinitionType.PROCESS);
+    setType(DefinitionType.PROCESS);
   }
 
   public ProcessDefinitionOptimizeDto(

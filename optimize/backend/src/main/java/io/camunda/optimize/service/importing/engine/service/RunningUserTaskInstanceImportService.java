@@ -8,7 +8,7 @@
 package io.camunda.optimize.service.importing.engine.service;
 
 import io.camunda.optimize.dto.engine.HistoricUserTaskInstanceDto;
-import io.camunda.optimize.dto.optimize.query.event.process.FlowNodeInstanceDto;
+import io.camunda.optimize.dto.optimize.query.process.FlowNodeInstanceDto;
 import io.camunda.optimize.rest.engine.EngineContext;
 import io.camunda.optimize.service.db.DatabaseClient;
 import io.camunda.optimize.service.db.writer.usertask.RunningUserTaskInstanceWriter;
@@ -38,7 +38,7 @@ public class RunningUserTaskInstanceImportService
       final EngineContext engineContext,
       final ProcessDefinitionResolverService processDefinitionResolverService,
       final DatabaseClient databaseClient) {
-    this.databaseImportJobExecutor =
+    databaseImportJobExecutor =
         new DatabaseImportJobExecutor(getClass().getSimpleName(), configurationService);
     this.engineContext = engineContext;
     this.runningUserTaskInstanceWriter = runningUserTaskInstanceWriter;
@@ -50,7 +50,7 @@ public class RunningUserTaskInstanceImportService
   @Override
   public void executeImport(
       final List<HistoricUserTaskInstanceDto> pageOfEngineEntities,
-      Runnable importCompleteCallback) {
+      final Runnable importCompleteCallback) {
     log.trace("Importing running user task entities from engine...");
 
     final boolean newDataIsAvailable = !pageOfEngineEntities.isEmpty();
@@ -90,7 +90,7 @@ public class RunningUserTaskInstanceImportService
   }
 
   private DatabaseImportJob<FlowNodeInstanceDto> createDatabaseImportJob(
-      final List<FlowNodeInstanceDto> userTasks, Runnable callback) {
+      final List<FlowNodeInstanceDto> userTasks, final Runnable callback) {
     final RunningUserTaskDatabaseImportJob importJob =
         new RunningUserTaskDatabaseImportJob(
             runningUserTaskInstanceWriter, configurationService, callback, databaseClient);

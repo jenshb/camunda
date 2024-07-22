@@ -37,7 +37,7 @@ import io.camunda.optimize.dto.optimize.importing.IdentityLinkLogEntryDto;
 import io.camunda.optimize.dto.optimize.importing.IdentityLinkLogType;
 import io.camunda.optimize.dto.optimize.persistence.AssigneeOperationDto;
 import io.camunda.optimize.dto.optimize.persistence.CandidateGroupOperationDto;
-import io.camunda.optimize.dto.optimize.query.event.process.FlowNodeInstanceDto;
+import io.camunda.optimize.dto.optimize.query.process.FlowNodeInstanceDto;
 import io.camunda.optimize.service.db.repository.IndexRepository;
 import io.camunda.optimize.service.db.repository.script.UserTaskScriptFactory;
 import java.util.ArrayList;
@@ -69,7 +69,7 @@ public class IdentityLinkLogWriter extends AbstractUserTaskWriter {
             .collect(groupingByConcurrent(IdentityLinkLogEntryDto::getTaskId));
 
     final List<FlowNodeInstanceDto> userTaskInstances = new ArrayList<>();
-    for (List<IdentityLinkLogEntryDto> identityLinkLogEntryDtoList :
+    for (final List<IdentityLinkLogEntryDto> identityLinkLogEntryDtoList :
         identityLinksByTaskId.values()) {
       final IdentityLinkLogEntryDto firstOperationEntry = identityLinkLogEntryDtoList.get(0);
       final List<AssigneeOperationDto> assigneeOperations =
@@ -89,7 +89,7 @@ public class IdentityLinkLogWriter extends AbstractUserTaskWriter {
     }
 
     final Map<String, List<FlowNodeInstanceDto>> processInstanceIdToUserTasks = new HashMap<>();
-    for (FlowNodeInstanceDto userTask : userTaskInstances) {
+    for (final FlowNodeInstanceDto userTask : userTaskInstances) {
       processInstanceIdToUserTasks.putIfAbsent(userTask.getProcessInstanceId(), new ArrayList<>());
       processInstanceIdToUserTasks.get(userTask.getProcessInstanceId()).add(userTask);
     }
@@ -136,7 +136,7 @@ public class IdentityLinkLogWriter extends AbstractUserTaskWriter {
 
   private List<String> extractCandidateGroups(
       final List<CandidateGroupOperationDto> identityLinkLogs) {
-    List<String> candidates = new ArrayList<>();
+    final List<String> candidates = new ArrayList<>();
     identityLinkLogs.forEach(
         logEntry -> {
           switch (logEntry.getOperationType()) {
@@ -158,7 +158,7 @@ public class IdentityLinkLogWriter extends AbstractUserTaskWriter {
         // will have the exact same timestamp.
         .reduce(
             (first, second) -> {
-              boolean sameTimestampAndFirstIsAddOperation =
+              final boolean sameTimestampAndFirstIsAddOperation =
                   first.getTimestamp().equals(second.getTimestamp())
                       && IDENTITY_LINK_OPERATION_ADD.equals(first.getOperationType())
                       && !IDENTITY_LINK_OPERATION_ADD.equals(second.getOperationType());

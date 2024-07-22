@@ -43,9 +43,6 @@ import io.camunda.optimize.service.db.writer.AbstractProcessInstanceDataWriter;
 import io.camunda.optimize.service.db.writer.InstantDashboardMetadataWriter;
 import io.camunda.optimize.service.db.writer.activity.RunningActivityInstanceWriter;
 import io.camunda.optimize.service.digest.DigestService;
-import io.camunda.optimize.service.events.ExternalEventService;
-import io.camunda.optimize.service.events.rollover.EventIndexRolloverService;
-import io.camunda.optimize.service.events.rollover.ExternalProcessVariableIndexRolloverService;
 import io.camunda.optimize.service.identity.PlatformIdentityService;
 import io.camunda.optimize.service.identity.PlatformUserIdentityCache;
 import io.camunda.optimize.service.identity.PlatformUserTaskIdentityCache;
@@ -58,14 +55,10 @@ import io.camunda.optimize.service.importing.PositionBasedImportIndexHandler;
 import io.camunda.optimize.service.importing.engine.EngineImportScheduler;
 import io.camunda.optimize.service.importing.engine.mediator.DefinitionXmlImportMediator;
 import io.camunda.optimize.service.importing.engine.mediator.StoreEngineImportProgressMediator;
-import io.camunda.optimize.service.importing.engine.mediator.factory.CamundaEventImportServiceFactory;
 import io.camunda.optimize.service.importing.engine.service.ImportObserver;
 import io.camunda.optimize.service.importing.engine.service.RunningActivityInstanceImportService;
 import io.camunda.optimize.service.importing.engine.service.definition.DecisionDefinitionResolverService;
 import io.camunda.optimize.service.importing.engine.service.definition.ProcessDefinitionResolverService;
-import io.camunda.optimize.service.importing.event.EventTraceStateProcessingScheduler;
-import io.camunda.optimize.service.importing.eventprocess.EventBasedProcessesInstanceImportScheduler;
-import io.camunda.optimize.service.importing.eventprocess.EventProcessInstanceImportMediatorManager;
 import io.camunda.optimize.service.importing.ingested.IngestedDataImportScheduler;
 import io.camunda.optimize.service.importing.ingested.mediator.StoreIngestedImportProgressMediator;
 import io.camunda.optimize.service.importing.page.TimestampBasedImportPage;
@@ -112,20 +105,15 @@ public class EmbeddedOptimizeExtension
     implements BeforeEachCallback, AfterEachCallback, BeforeAllCallback, AfterAllCallback {
 
   public static final String DEFAULT_ENGINE_ALIAS = "camunda-bpm";
-
+  private static final ObjectMapper configObjectMapper =
+      new ObjectMapper().registerModules(new JavaTimeModule(), new Jdk8Module());
+  private static String serializedDefaultConfiguration;
   private final boolean beforeAllMode;
   private ApplicationContext applicationContext;
-
   private OptimizeRequestExecutor requestExecutor;
   private ObjectMapper objectMapper;
   private boolean resetImportOnStart = true;
-
   @Getter @Setter private boolean closeContextAfterTest = false;
-
-  private static final ObjectMapper configObjectMapper =
-      new ObjectMapper().registerModules(new JavaTimeModule(), new Jdk8Module());
-
-  private static String serializedDefaultConfiguration;
 
   public EmbeddedOptimizeExtension() {
     this(false);
@@ -150,13 +138,6 @@ public class EmbeddedOptimizeExtension
     if (beforeAllMode) {
       setupOptimize();
     }
-  }
-
-  public void setApplicationContext(final ApplicationContext applicationContext) {
-    this.applicationContext = applicationContext;
-    applicationContext
-        .getBean(ApplicationContextProvider.class)
-        .setApplicationContext(applicationContext);
   }
 
   @Override
@@ -338,14 +319,11 @@ public class EmbeddedOptimizeExtension
     final RunningActivityInstanceWriter writer = getBean(RunningActivityInstanceWriter.class);
     final ProcessDefinitionResolverService processDefinitionResolverService =
         getBean(ProcessDefinitionResolverService.class);
-    final CamundaEventImportServiceFactory camundaEventServiceFactory =
-        getBean(CamundaEventImportServiceFactory.class);
 
     for (final EngineContext configuredEngine : getConfiguredEngines()) {
       final RunningActivityInstanceImportService service =
           new RunningActivityInstanceImportService(
               writer,
-              camundaEventServiceFactory.createCamundaEventService(configuredEngine),
               configuredEngine,
               getConfigurationService(),
               processDefinitionResolverService,
@@ -622,6 +600,13 @@ public class EmbeddedOptimizeExtension
     return applicationContext;
   }
 
+  public void setApplicationContext(final ApplicationContext applicationContext) {
+    this.applicationContext = applicationContext;
+    applicationContext
+        .getBean(ApplicationContextProvider.class)
+        .setApplicationContext(applicationContext);
+  }
+
   public <T> T getBean(final Class<T> clazz) {
     return applicationContext.getBean(clazz);
   }
@@ -666,15 +651,6 @@ public class EmbeddedOptimizeExtension
     return getBean(PlatformUserTaskIdentityCache.class);
   }
 
-  public EventIndexRolloverService getEventIndexRolloverService() {
-    return getBean(EventIndexRolloverService.class);
-  }
-
-  public ExternalProcessVariableIndexRolloverService
-      getExternalProcessVariableIndexRolloverService() {
-    return getBean(ExternalProcessVariableIndexRolloverService.class);
-  }
-
   public LocalizationService getLocalizationService() {
     return getBean(LocalizationService.class);
   }
@@ -707,41 +683,12 @@ public class EmbeddedOptimizeExtension
     return getBean(PlatformIdentityService.class);
   }
 
-  @SneakyThrows
-  public void processEvents() {
-    final EventTraceStateProcessingScheduler eventProcessingScheduler =
-        getEventProcessingScheduler();
-
-    // run one cycle
-    eventProcessingScheduler.runImportRound(true).get();
-
-    // do final progress update
-    eventProcessingScheduler.getEventProcessingProgressMediator().runImport().get();
-  }
-
-  public ExternalEventService getEventService() {
-    return getBean(ExternalEventService.class);
-  }
-
   public SettingsService getSettingsService() {
     return getBean(SettingsService.class);
   }
 
   public OptimizeIndexNameService getIndexNameService() {
     return getBean(OptimizeIndexNameService.class);
-  }
-
-  public EventTraceStateProcessingScheduler getEventProcessingScheduler() {
-    return getBean(EventTraceStateProcessingScheduler.class);
-  }
-
-  public EventProcessInstanceImportMediatorManager getEventProcessInstanceImportMediatorManager() {
-    return getBean(EventProcessInstanceImportMediatorManager.class);
-  }
-
-  public EventBasedProcessesInstanceImportScheduler
-      getEventBasedProcessesInstanceImportScheduler() {
-    return getBean(EventBasedProcessesInstanceImportScheduler.class);
   }
 
   public DatabaseSchemaManager getDatabaseSchemaManager() {

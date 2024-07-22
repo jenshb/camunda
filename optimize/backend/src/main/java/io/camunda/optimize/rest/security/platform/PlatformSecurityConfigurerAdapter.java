@@ -13,7 +13,6 @@ import static io.camunda.optimize.jetty.OptimizeResourceConstants.STATIC_RESOURC
 import static io.camunda.optimize.jetty.OptimizeResourceConstants.STATUS_WEBSOCKET_PATH;
 import static io.camunda.optimize.rest.AuthenticationRestService.AUTHENTICATION_PATH;
 import static io.camunda.optimize.rest.HealthRestService.READYZ_PATH;
-import static io.camunda.optimize.rest.IngestionRestService.EVENT_BATCH_SUB_PATH;
 import static io.camunda.optimize.rest.IngestionRestService.INGESTION_PATH;
 import static io.camunda.optimize.rest.IngestionRestService.VARIABLE_SUB_PATH;
 import static io.camunda.optimize.rest.LicenseCheckingRestService.LICENSE_PATH;
@@ -62,9 +61,9 @@ import org.springframework.security.web.util.matcher.AntPathRequestMatcher;
 @Conditional(CamundaPlatformCondition.class)
 public class PlatformSecurityConfigurerAdapter extends AbstractSecurityConfigurerAdapter {
 
+  public static final String DEEP_SUB_PATH_ANY = "/**";
   private static final String CSV_SUFFIX = ".csv";
   private static final String SUB_PATH_ANY = "/*";
-  public static final String DEEP_SUB_PATH_ANY = "/**";
   private final AuthenticationCookieRefreshFilter authenticationCookieRefreshFilter;
   private final SingleSignOnRequestFilter singleSignOnRequestFilter;
 
@@ -85,7 +84,8 @@ public class PlatformSecurityConfigurerAdapter extends AbstractSecurityConfigure
   }
 
   @Bean
-  public AuthenticationCookieFilter authenticationCookieFilter(HttpSecurity http) throws Exception {
+  public AuthenticationCookieFilter authenticationCookieFilter(final HttpSecurity http)
+      throws Exception {
     return new AuthenticationCookieFilter(
         sessionService,
         http.getSharedObject(AuthenticationManagerBuilder.class)
@@ -96,13 +96,12 @@ public class PlatformSecurityConfigurerAdapter extends AbstractSecurityConfigure
   @SneakyThrows
   @Bean
   @Order(1)
-  protected SecurityFilterChain configurePublicApi(HttpSecurity http) {
+  protected SecurityFilterChain configurePublicApi(final HttpSecurity http) {
     final HttpSecurity httpSecurityBuilder =
         http.securityMatchers(
             securityMatchers ->
                 securityMatchers.requestMatchers(
                     new AntPathRequestMatcher(PUBLIC_API_PATH),
-                    new AntPathRequestMatcher(createApiPath(INGESTION_PATH, EVENT_BATCH_SUB_PATH)),
                     new AntPathRequestMatcher(createApiPath(INGESTION_PATH, VARIABLE_SUB_PATH))));
     return applyPublicApiOptions(httpSecurityBuilder);
   }
@@ -110,7 +109,7 @@ public class PlatformSecurityConfigurerAdapter extends AbstractSecurityConfigure
   @SneakyThrows
   @Bean
   @Order(2)
-  protected SecurityFilterChain configureWebSecurity(HttpSecurity http) {
+  protected SecurityFilterChain configureWebSecurity(final HttpSecurity http) {
     return super.configureGenericSecurityOptions(http)
         // Then we configure the specific web security for CCSM
         .authorizeHttpRequests(
@@ -169,15 +168,17 @@ public class PlatformSecurityConfigurerAdapter extends AbstractSecurityConfigure
   }
 
   private JwtDecoder createJwtDecoderWithAudience(final String jwtSetUri) {
-    NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwtSetUri).build();
-    OAuth2TokenValidator<Jwt> audienceValidator =
+    final NimbusJwtDecoder jwtDecoder = NimbusJwtDecoder.withJwkSetUri(jwtSetUri).build();
+    final OAuth2TokenValidator<Jwt> audienceValidator =
         new AudienceValidator(configurationService.getOptimizeApiConfiguration().getAudience());
     jwtDecoder.setJwtValidator(audienceValidator);
     return jwtDecoder;
   }
 
   private void failureHandler(
-      HttpServletRequest request, HttpServletResponse response, AuthenticationException ex) {
+      final HttpServletRequest request,
+      final HttpServletResponse response,
+      final AuthenticationException ex) {
     if (isCSVRequest(request.getPathInfo())) {
       response.setStatus(TEMPORARY_REDIRECT.value());
       response.setHeader(HttpHeaders.LOCATION, INDEX_PAGE);

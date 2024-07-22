@@ -12,7 +12,6 @@ import io.camunda.optimize.dto.optimize.ProcessInstanceDto;
 import io.camunda.optimize.dto.optimize.datasource.EngineDataSourceDto;
 import io.camunda.optimize.plugin.BusinessKeyImportAdapterProvider;
 import io.camunda.optimize.rest.engine.EngineContext;
-import io.camunda.optimize.service.CamundaEventImportService;
 import io.camunda.optimize.service.db.DatabaseClient;
 import io.camunda.optimize.service.db.writer.RunningProcessInstanceWriter;
 import io.camunda.optimize.service.importing.DatabaseImportJob;
@@ -24,14 +23,12 @@ import java.util.List;
 public class RunningProcessInstanceImportService extends AbstractProcessInstanceImportService {
 
   private final RunningProcessInstanceWriter runningProcessInstanceWriter;
-  private final CamundaEventImportService camundaEventService;
 
   public RunningProcessInstanceImportService(
       final ConfigurationService configurationService,
       final EngineContext engineContext,
       final BusinessKeyImportAdapterProvider businessKeyImportAdapterProvider,
       final RunningProcessInstanceWriter runningProcessInstanceWriter,
-      final CamundaEventImportService camundaEventService,
       final ProcessDefinitionResolverService processDefinitionResolverService,
       final DatabaseClient databaseClient) {
     super(
@@ -41,19 +38,14 @@ public class RunningProcessInstanceImportService extends AbstractProcessInstance
         processDefinitionResolverService,
         databaseClient);
     this.runningProcessInstanceWriter = runningProcessInstanceWriter;
-    this.camundaEventService = camundaEventService;
   }
 
   @Override
   protected DatabaseImportJob<ProcessInstanceDto> createDatabaseImportJob(
       final List<ProcessInstanceDto> processInstances, final Runnable callback) {
-    RunningProcessInstanceDatabaseImportJob importJob =
+    final RunningProcessInstanceDatabaseImportJob importJob =
         new RunningProcessInstanceDatabaseImportJob(
-            runningProcessInstanceWriter,
-            camundaEventService,
-            configurationService,
-            callback,
-            databaseClient);
+            runningProcessInstanceWriter, configurationService, callback, databaseClient);
     importJob.setEntitiesToImport(processInstances);
     return importJob;
   }

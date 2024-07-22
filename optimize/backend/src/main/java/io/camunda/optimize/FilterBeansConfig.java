@@ -9,7 +9,6 @@ package io.camunda.optimize;
 
 import static io.camunda.optimize.jetty.OptimizeResourceConstants.REST_API_PATH;
 import static io.camunda.optimize.jetty.OptimizeResourceConstants.STATIC_RESOURCE_PATH;
-import static io.camunda.optimize.rest.IngestionRestService.EVENT_BATCH_SUB_PATH;
 import static io.camunda.optimize.rest.IngestionRestService.INGESTION_PATH;
 import static io.camunda.optimize.rest.IngestionRestService.VARIABLE_SUB_PATH;
 
@@ -49,14 +48,14 @@ public class FilterBeansConfig {
 
   @Bean
   public LicenseFilter licenseFilter(
-      LicenseManager licenseManager, ApplicationContext applicationContext) {
+      final LicenseManager licenseManager, final ApplicationContext applicationContext) {
     return new LicenseFilter(licenseManager, applicationContext);
   }
 
   @Bean
   public FilterRegistrationBean<LicenseFilter> licenseFilterRegistrationBean(
-      LicenseFilter licenseFilter) {
-    FilterRegistrationBean<LicenseFilter> registrationBean = new FilterRegistrationBean<>();
+      final LicenseFilter licenseFilter) {
+    final FilterRegistrationBean<LicenseFilter> registrationBean = new FilterRegistrationBean<>();
 
     registrationBean.setFilter(licenseFilter);
     registrationBean.addUrlPatterns("/*");
@@ -70,10 +69,10 @@ public class FilterBeansConfig {
 
   @Bean
   public SingleSignOnRequestFilter singleSignOnFilter(
-      AuthenticationExtractorProvider authenticationExtractorProvider,
-      ApplicationAuthorizationService applicationAuthorizationService,
-      SessionService sessionService,
-      AuthCookieService authCookieService) {
+      final AuthenticationExtractorProvider authenticationExtractorProvider,
+      final ApplicationAuthorizationService applicationAuthorizationService,
+      final SessionService sessionService,
+      final AuthCookieService authCookieService) {
     return new SingleSignOnRequestFilter(
         authenticationExtractorProvider,
         applicationAuthorizationService,
@@ -83,8 +82,8 @@ public class FilterBeansConfig {
 
   @Bean
   public FilterRegistrationBean<SingleSignOnRequestFilter> singleSignOnFilterRegistrationBean(
-      SingleSignOnRequestFilter singleSignOnRequestFilter) {
-    FilterRegistrationBean<SingleSignOnRequestFilter> registrationBean =
+      final SingleSignOnRequestFilter singleSignOnRequestFilter) {
+    final FilterRegistrationBean<SingleSignOnRequestFilter> registrationBean =
         new FilterRegistrationBean<>();
 
     registrationBean.setFilter(singleSignOnRequestFilter);
@@ -103,8 +102,8 @@ public class FilterBeansConfig {
 
   @Bean
   public FilterRegistrationBean<NoCachingFilter> noCachingFilterRegistrationBean(
-      NoCachingFilter noCachingFilter) {
-    FilterRegistrationBean<NoCachingFilter> registrationBean = new FilterRegistrationBean<>();
+      final NoCachingFilter noCachingFilter) {
+    final FilterRegistrationBean<NoCachingFilter> registrationBean = new FilterRegistrationBean<>();
 
     registrationBean.setFilter(noCachingFilter);
     registrationBean.addUrlPatterns("/*");
@@ -118,50 +117,28 @@ public class FilterBeansConfig {
 
   @Bean
   public MaxRequestSizeFilter maxRequestSizeFilter(
-      @Qualifier("optimizeMapper") ObjectMapper objectMapper,
-      ConfigurationService configurationService) {
+      @Qualifier("optimizeMapper") final ObjectMapper objectMapper,
+      final ConfigurationService configurationService) {
     return new MaxRequestSizeFilter(
         () -> objectMapper,
         () -> configurationService.getEventIngestionConfiguration().getMaxBatchRequestBytes());
   }
 
   @Bean
-  public FilterRegistrationBean<MaxRequestSizeFilter> maxRequestSizeFilterRegistrationBean(
-      MaxRequestSizeFilter maxRequestSizeFilter) {
-    FilterRegistrationBean<MaxRequestSizeFilter> registrationBean = new FilterRegistrationBean<>();
-
-    registrationBean.setFilter(maxRequestSizeFilter);
-    registrationBean.addUrlPatterns(REST_API_PATH + INGESTION_PATH + EVENT_BATCH_SUB_PATH);
-    registrationBean.setDispatcherTypes(DispatcherType.REQUEST, DispatcherType.ASYNC);
-
-    registrationBean.setName("eventIngestionMaxRequestSizeFilter");
-
-    return registrationBean;
-  }
-
-  @Bean
   public FilterRegistrationBean<IngestionQoSFilter> variableIngestionQoSFilterRegistrationBean(
-      ConfigurationService configurationService) {
+      final ConfigurationService configurationService) {
     return getIngestionQoSFilterRegistrationBean(
         () -> configurationService.getVariableIngestionConfiguration().getMaxRequests(),
         VARIABLE_SUB_PATH,
         "variableIngestionQoSFilter");
   }
 
-  @Bean
-  public FilterRegistrationBean<IngestionQoSFilter> eventIngestionQoSFilterRegistrationBean(
-      ConfigurationService configurationService) {
-    return getIngestionQoSFilterRegistrationBean(
-        () -> configurationService.getEventIngestionConfiguration().getMaxRequests(),
-        EVENT_BATCH_SUB_PATH,
-        "eventIngestionQoSFilter");
-  }
-
   private FilterRegistrationBean<IngestionQoSFilter> getIngestionQoSFilterRegistrationBean(
-      Callable<Integer> provider, String subPath, String name) {
-    IngestionQoSFilter ingestionQoSFilter = new IngestionQoSFilter(provider);
+      final Callable<Integer> provider, final String subPath, final String name) {
+    final IngestionQoSFilter ingestionQoSFilter = new IngestionQoSFilter(provider);
 
-    FilterRegistrationBean<IngestionQoSFilter> registrationBean = new FilterRegistrationBean<>();
+    final FilterRegistrationBean<IngestionQoSFilter> registrationBean =
+        new FilterRegistrationBean<>();
 
     registrationBean.setFilter(ingestionQoSFilter);
     registrationBean.addUrlPatterns(REST_API_PATH + INGESTION_PATH + subPath);
@@ -173,8 +150,8 @@ public class FilterBeansConfig {
   @Bean
   public FilterRegistrationBean<JavaScriptMainLicenseEnricherFilter>
       javaScriptMainLicenseEnricherFilterRegistrationBean(
-          JavaScriptMainLicenseEnricherFilter javaScriptMainLicenseEnricherFilter) {
-    FilterRegistrationBean<JavaScriptMainLicenseEnricherFilter> registrationBean =
+          final JavaScriptMainLicenseEnricherFilter javaScriptMainLicenseEnricherFilter) {
+    final FilterRegistrationBean<JavaScriptMainLicenseEnricherFilter> registrationBean =
         new FilterRegistrationBean<>();
 
     registrationBean.setFilter(javaScriptMainLicenseEnricherFilter);
@@ -189,15 +166,16 @@ public class FilterBeansConfig {
   @Bean
   public FilterRegistrationBean<MaxRequestSizeFilter>
       variableIngestionRequestLimitFilterRegistrationBean(
-          ConfigurationService configurationService, ObjectMapper objectMapper) {
+          final ConfigurationService configurationService, final ObjectMapper objectMapper) {
 
-    MaxRequestSizeFilter variableIngestionRequestLimitFilter =
+    final MaxRequestSizeFilter variableIngestionRequestLimitFilter =
         new MaxRequestSizeFilter(
             () -> objectMapper,
             () ->
                 configurationService.getVariableIngestionConfiguration().getMaxBatchRequestBytes());
 
-    FilterRegistrationBean<MaxRequestSizeFilter> registrationBean = new FilterRegistrationBean<>();
+    final FilterRegistrationBean<MaxRequestSizeFilter> registrationBean =
+        new FilterRegistrationBean<>();
 
     registrationBean.setFilter(variableIngestionRequestLimitFilter);
     registrationBean.addUrlPatterns(REST_API_PATH + INGESTION_PATH + VARIABLE_SUB_PATH);

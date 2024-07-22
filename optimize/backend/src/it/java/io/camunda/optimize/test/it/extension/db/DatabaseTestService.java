@@ -8,11 +8,7 @@
 package io.camunda.optimize.test.it.extension.db;
 
 import static io.camunda.optimize.ApplicationContextProvider.getBean;
-import static io.camunda.optimize.service.db.DatabaseConstants.CAMUNDA_ACTIVITY_EVENT_INDEX_PREFIX;
 import static io.camunda.optimize.service.db.DatabaseConstants.DECISION_INSTANCE_MULTI_ALIAS;
-import static io.camunda.optimize.service.db.DatabaseConstants.EVENT_PROCESS_INSTANCE_INDEX_PREFIX;
-import static io.camunda.optimize.service.db.DatabaseConstants.EVENT_SEQUENCE_COUNT_INDEX_PREFIX;
-import static io.camunda.optimize.service.db.DatabaseConstants.EVENT_TRACE_STATE_INDEX_PREFIX;
 import static io.camunda.optimize.service.db.DatabaseConstants.OPTIMIZE_DATE_FORMAT;
 import static io.camunda.optimize.service.db.DatabaseConstants.PROCESS_INSTANCE_ARCHIVE_INDEX_PREFIX;
 import static io.camunda.optimize.service.db.DatabaseConstants.PROCESS_INSTANCE_MULTI_ALIAS;
@@ -29,15 +25,10 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.google.common.collect.ImmutableMap;
-import io.camunda.optimize.dto.optimize.IdentityDto;
 import io.camunda.optimize.dto.optimize.OptimizeDto;
 import io.camunda.optimize.dto.optimize.ProcessInstanceDto;
 import io.camunda.optimize.dto.optimize.importing.DecisionInstanceDto;
 import io.camunda.optimize.dto.optimize.query.MetadataDto;
-import io.camunda.optimize.dto.optimize.query.event.process.EventProcessDefinitionDto;
-import io.camunda.optimize.dto.optimize.query.event.process.EventProcessInstanceDto;
-import io.camunda.optimize.dto.optimize.query.event.process.EventProcessPublishStateDto;
-import io.camunda.optimize.dto.optimize.query.event.process.EventProcessRoleRequestDto;
 import io.camunda.optimize.dto.optimize.query.report.single.configuration.AggregationDto;
 import io.camunda.optimize.service.db.DatabaseClient;
 import io.camunda.optimize.service.db.repository.IndexRepository;
@@ -46,8 +37,6 @@ import io.camunda.optimize.service.db.schema.index.DecisionInstanceIndex;
 import io.camunda.optimize.service.db.schema.index.IndexMappingCreatorBuilder;
 import io.camunda.optimize.service.db.schema.index.ProcessInstanceIndex;
 import io.camunda.optimize.service.db.schema.index.VariableUpdateInstanceIndex;
-import io.camunda.optimize.service.db.schema.index.events.EventIndex;
-import io.camunda.optimize.service.db.schema.index.events.EventProcessInstanceIndex;
 import io.camunda.optimize.service.util.configuration.ConfigurationService;
 import io.camunda.optimize.service.util.configuration.DatabaseType;
 import io.camunda.optimize.service.util.configuration.elasticsearch.DatabaseConnectionNodeConfiguration;
@@ -60,13 +49,10 @@ import io.camunda.zeebe.protocol.record.value.BpmnElementType;
 import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.StringSubstitutor;
@@ -121,19 +107,6 @@ public abstract class DatabaseTestService {
     return OBJECT_MAPPER;
   }
 
-  public void updateEventProcessRoles(
-      final String eventProcessId, final List<IdentityDto> identityDtos) {
-    final Map<String, Object> params =
-        Collections.singletonMap(
-            "updatedRoles",
-            getObjectMapper()
-                .convertValue(
-                    mapIdentityDtosToEventProcessRoleRequestDto(identityDtos), Object.class));
-    final ScriptData scriptData =
-        new ScriptData(params, "ctx._source.roles = params.updatedRoles;");
-    updateEventProcessRoles(eventProcessId, identityDtos, scriptData);
-  }
-
   public abstract void beforeEach();
 
   public abstract void afterEach();
@@ -168,10 +141,6 @@ public abstract class DatabaseTestService {
   public abstract void deleteAllIndicesContainingTerm(final String indexTerm);
 
   public abstract void deleteAllSingleProcessReports();
-
-  public abstract void deleteExternalEventSequenceCountIndex();
-
-  public abstract void deleteAllExternalEventIndices();
 
   public abstract void deleteTerminatedSessionsIndex();
 
@@ -221,22 +190,6 @@ public abstract class DatabaseTestService {
       final TermsQueryContainer queryForZeebeRecords,
       final Class<T> zeebeRecordClass);
 
-  public abstract void updateEventProcessRoles(
-      final String eventProcessId,
-      final List<IdentityDto> identityDtos,
-      final ScriptData scriptData);
-
-  public abstract Map<String, Set<String>> getEventProcessInstanceIndicesWithAliasesFromDatabase();
-
-  public abstract Optional<EventProcessPublishStateDto> getEventProcessPublishStateDtoFromDatabase(
-      final String processMappingId);
-
-  public abstract Optional<EventProcessDefinitionDto> getEventProcessDefinitionFromDatabase(
-      final String definitionId);
-
-  public abstract List<EventProcessInstanceDto>
-      getEventProcessInstancesFromDatabaseForProcessPublishStateId(final String publishStateId);
-
   public abstract void deleteProcessInstancesFromIndex(final String indexName, final String id);
 
   public abstract void deleteDatabaseEntryById(final String indexName, final String id);
@@ -277,8 +230,6 @@ public abstract class DatabaseTestService {
     try {
       refreshAllOptimizeIndices();
       deleteAllOptimizeData();
-      deleteAllEventProcessInstanceIndices();
-      deleteCamundaEventIndicesAndEventCountsAndTraces();
       deleteAllProcessInstanceArchiveIndices();
     } catch (final Exception e) {
       // nothing to do
@@ -337,27 +288,8 @@ public abstract class DatabaseTestService {
     return updateScript;
   }
 
-  protected void deleteCamundaEventIndicesAndEventCountsAndTraces() {
-    deleteIndicesStartingWithPrefix(CAMUNDA_ACTIVITY_EVENT_INDEX_PREFIX);
-    deleteIndicesStartingWithPrefix(EVENT_SEQUENCE_COUNT_INDEX_PREFIX);
-    deleteIndicesStartingWithPrefix(EVENT_TRACE_STATE_INDEX_PREFIX);
-  }
-
   protected void deleteAllProcessInstanceArchiveIndices() {
     deleteIndicesStartingWithPrefix(PROCESS_INSTANCE_ARCHIVE_INDEX_PREFIX);
-  }
-
-  protected void deleteAllEventProcessInstanceIndices() {
-    deleteIndicesStartingWithPrefix(EVENT_PROCESS_INSTANCE_INDEX_PREFIX);
-  }
-
-  protected List<EventProcessRoleRequestDto<IdentityDto>>
-      mapIdentityDtosToEventProcessRoleRequestDto(final List<IdentityDto> identityDtos) {
-    return identityDtos.stream()
-        .filter(Objects::nonNull)
-        .map(identityDto -> new IdentityDto(identityDto.getId(), identityDto.getType()))
-        .map(EventProcessRoleRequestDto::new)
-        .collect(Collectors.toList());
   }
 
   public void createMissingIndices(
@@ -374,23 +306,14 @@ public abstract class DatabaseTestService {
 
   public abstract Long getImportedActivityCount();
 
-  public abstract void removeStoredOrderCountersForDefinitionKey(
-      String definitionKey, ScriptData script);
-
   public abstract List<String> getAllIndicesWithWriteAlias(String aliasNameWithPrefix);
 
   public abstract List<String> getAllIndicesWithReadOnlyAlias(String aliasNameWithPrefix);
-
-  public abstract void deleteTraceStateImportIndexForDefinitionKey(String definitionKey);
 
   public abstract void verifyThatAllDocumentsOfIndexAreRelatedToRunningInstancesOnly(
       String entityIndex, String processInstanceField, TimeValue scrollKeepAlive);
 
   public abstract Integer getVariableInstanceCount(String variableName);
-
-  public abstract EventProcessInstanceIndex getEventInstanceIndex(String indexId);
-
-  public abstract EventIndex getEventIndex();
 
   public abstract VariableUpdateInstanceIndex getVariableUpdateInstanceIndex();
 }

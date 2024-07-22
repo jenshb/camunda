@@ -33,7 +33,6 @@ import org.springframework.stereotype.Component;
 public class ProcessInstanceEngineImportMediatorFactory
     extends AbstractEngineImportMediatorFactory {
 
-  private final CamundaEventImportServiceFactory camundaEventImportServiceFactory;
   private final CompletedProcessInstanceWriter completedProcessInstanceWriter;
   private final RunningProcessInstanceWriter runningProcessInstanceWriter;
   private final BusinessKeyImportAdapterProvider businessKeyImportAdapterProvider;
@@ -44,7 +43,6 @@ public class ProcessInstanceEngineImportMediatorFactory
       final BeanFactory beanFactory,
       final ImportIndexHandlerRegistry importIndexHandlerRegistry,
       final ConfigurationService configurationService,
-      final CamundaEventImportServiceFactory camundaEventImportServiceFactory,
       final CompletedProcessInstanceWriter completedProcessInstanceWriter,
       final RunningProcessInstanceWriter runningProcessInstanceWriter,
       final BusinessKeyImportAdapterProvider businessKeyImportAdapterProvider,
@@ -52,7 +50,6 @@ public class ProcessInstanceEngineImportMediatorFactory
       final DatabaseClient databaseClient,
       final ProcessInstanceRepository processInstanceRepository) {
     super(beanFactory, importIndexHandlerRegistry, configurationService, databaseClient);
-    this.camundaEventImportServiceFactory = camundaEventImportServiceFactory;
     this.completedProcessInstanceWriter = completedProcessInstanceWriter;
     this.runningProcessInstanceWriter = runningProcessInstanceWriter;
     this.businessKeyImportAdapterProvider = businessKeyImportAdapterProvider;
@@ -68,7 +65,7 @@ public class ProcessInstanceEngineImportMediatorFactory
   }
 
   public CompletedProcessInstanceEngineImportMediator
-      createCompletedProcessInstanceEngineImportMediator(EngineContext engineContext) {
+      createCompletedProcessInstanceEngineImportMediator(final EngineContext engineContext) {
     return new CompletedProcessInstanceEngineImportMediator(
         importIndexHandlerRegistry.getCompletedProcessInstanceImportIndexHandler(
             engineContext.getEngineAlias()),
@@ -78,7 +75,6 @@ public class ProcessInstanceEngineImportMediatorFactory
             engineContext,
             businessKeyImportAdapterProvider,
             completedProcessInstanceWriter,
-            camundaEventImportServiceFactory.createCamundaEventService(engineContext),
             processDefinitionResolverService,
             databaseClient,
             processInstanceRepository),
@@ -87,7 +83,7 @@ public class ProcessInstanceEngineImportMediatorFactory
   }
 
   public RunningProcessInstanceEngineImportMediator
-      createRunningProcessInstanceEngineImportMediator(EngineContext engineContext) {
+      createRunningProcessInstanceEngineImportMediator(final EngineContext engineContext) {
     return new RunningProcessInstanceEngineImportMediator(
         importIndexHandlerRegistry.getRunningProcessInstanceImportIndexHandler(
             engineContext.getEngineAlias()),
@@ -97,7 +93,6 @@ public class ProcessInstanceEngineImportMediatorFactory
             engineContext,
             businessKeyImportAdapterProvider,
             runningProcessInstanceWriter,
-            camundaEventImportServiceFactory.createCamundaEventService(engineContext),
             processDefinitionResolverService,
             databaseClient),
         configurationService,

@@ -12,7 +12,6 @@ import io.camunda.optimize.dto.optimize.ProcessInstanceDto;
 import io.camunda.optimize.dto.optimize.datasource.EngineDataSourceDto;
 import io.camunda.optimize.plugin.BusinessKeyImportAdapterProvider;
 import io.camunda.optimize.rest.engine.EngineContext;
-import io.camunda.optimize.service.CamundaEventImportService;
 import io.camunda.optimize.service.db.DatabaseClient;
 import io.camunda.optimize.service.db.repository.ProcessInstanceRepository;
 import io.camunda.optimize.service.db.writer.CompletedProcessInstanceWriter;
@@ -26,7 +25,6 @@ import java.util.List;
 public class CompletedProcessInstanceImportService extends AbstractProcessInstanceImportService {
 
   private final CompletedProcessInstanceWriter completedProcessInstanceWriter;
-  private final CamundaEventImportService camundaEventService;
   private final ProcessInstanceRepository processInstanceRepository;
 
   public CompletedProcessInstanceImportService(
@@ -34,7 +32,6 @@ public class CompletedProcessInstanceImportService extends AbstractProcessInstan
       final EngineContext engineContext,
       final BusinessKeyImportAdapterProvider businessKeyImportAdapterProvider,
       final CompletedProcessInstanceWriter completedProcessInstanceWriter,
-      final CamundaEventImportService camundaEventService,
       final ProcessDefinitionResolverService processDefinitionResolverService,
       final DatabaseClient databaseClient,
       final ProcessInstanceRepository processInstanceRepository) {
@@ -45,20 +42,15 @@ public class CompletedProcessInstanceImportService extends AbstractProcessInstan
         processDefinitionResolverService,
         databaseClient);
     this.completedProcessInstanceWriter = completedProcessInstanceWriter;
-    this.camundaEventService = camundaEventService;
     this.processInstanceRepository = processInstanceRepository;
   }
 
   @Override
   protected DatabaseImportJob<ProcessInstanceDto> createDatabaseImportJob(
       final List<ProcessInstanceDto> processInstances, final Runnable callback) {
-    CompletedProcessInstanceDatabaseImportJob importJob =
+    final CompletedProcessInstanceDatabaseImportJob importJob =
         new CompletedProcessInstanceDatabaseImportJob(
-            completedProcessInstanceWriter,
-            camundaEventService,
-            callback,
-            databaseClient,
-            processInstanceRepository);
+            completedProcessInstanceWriter, callback, databaseClient, processInstanceRepository);
     importJob.setEntitiesToImport(processInstances);
     return importJob;
   }

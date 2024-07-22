@@ -19,7 +19,7 @@ import io.camunda.optimize.dto.optimize.ImportRequestDto;
 import io.camunda.optimize.dto.optimize.ProcessInstanceDto;
 import io.camunda.optimize.dto.optimize.RequestType;
 import io.camunda.optimize.dto.optimize.datasource.EngineDataSourceDto;
-import io.camunda.optimize.dto.optimize.query.event.process.FlowNodeInstanceDto;
+import io.camunda.optimize.dto.optimize.query.process.FlowNodeInstanceDto;
 import io.camunda.optimize.service.db.repository.IndexRepository;
 import io.camunda.optimize.service.db.schema.ScriptData;
 import io.camunda.optimize.service.db.writer.DatabaseWriterUtil;
@@ -55,8 +55,8 @@ public abstract class AbstractUserTaskWriter {
     indexRepository.createMissingIndices(
         PROCESS_INSTANCE_INDEX, Set.of(PROCESS_INSTANCE_MULTI_ALIAS), keys);
 
-    Map<String, List<FlowNodeInstanceDto>> userTaskToProcessInstance = new HashMap<>();
-    for (FlowNodeInstanceDto userTask : userTaskInstances) {
+    final Map<String, List<FlowNodeInstanceDto>> userTaskToProcessInstance = new HashMap<>();
+    for (final FlowNodeInstanceDto userTask : userTaskInstances) {
       userTaskToProcessInstance.putIfAbsent(userTask.getProcessInstanceId(), new ArrayList<>());
       userTaskToProcessInstance.get(userTask.getProcessInstanceId()).add(userTask);
     }

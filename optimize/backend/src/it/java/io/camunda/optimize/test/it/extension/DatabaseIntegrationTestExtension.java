@@ -7,13 +7,9 @@
  */
 package io.camunda.optimize.test.it.extension;
 
-import static io.camunda.optimize.rest.RestTestConstants.DEFAULT_USERNAME;
 import static io.camunda.optimize.service.db.DatabaseConstants.DECISION_DEFINITION_INDEX_NAME;
 import static io.camunda.optimize.service.db.DatabaseConstants.DECISION_INSTANCE_INDEX_PREFIX;
 import static io.camunda.optimize.service.db.DatabaseConstants.DECISION_INSTANCE_MULTI_ALIAS;
-import static io.camunda.optimize.service.db.DatabaseConstants.EVENT_PROCESS_DEFINITION_INDEX_NAME;
-import static io.camunda.optimize.service.db.DatabaseConstants.EVENT_PROCESS_MAPPING_INDEX_NAME;
-import static io.camunda.optimize.service.db.DatabaseConstants.EXTERNAL_EVENTS_INDEX_NAME;
 import static io.camunda.optimize.service.db.DatabaseConstants.PROCESS_DEFINITION_INDEX_NAME;
 import static io.camunda.optimize.service.db.DatabaseConstants.PROCESS_INSTANCE_INDEX_PREFIX;
 import static io.camunda.optimize.service.db.DatabaseConstants.PROCESS_INSTANCE_MULTI_ALIAS;
@@ -24,29 +20,17 @@ import static io.camunda.optimize.service.db.schema.index.ProcessInstanceIndex.F
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.common.collect.ImmutableMap;
 import io.camunda.optimize.dto.optimize.DecisionDefinitionOptimizeDto;
-import io.camunda.optimize.dto.optimize.IdentityDto;
-import io.camunda.optimize.dto.optimize.IdentityType;
 import io.camunda.optimize.dto.optimize.ProcessDefinitionOptimizeDto;
 import io.camunda.optimize.dto.optimize.ProcessInstanceDto;
 import io.camunda.optimize.dto.optimize.TenantDto;
 import io.camunda.optimize.dto.optimize.importing.DecisionInstanceDto;
 import io.camunda.optimize.dto.optimize.query.MetadataDto;
-import io.camunda.optimize.dto.optimize.query.event.process.CamundaActivityEventDto;
-import io.camunda.optimize.dto.optimize.query.event.process.EventDto;
-import io.camunda.optimize.dto.optimize.query.event.process.EventProcessDefinitionDto;
-import io.camunda.optimize.dto.optimize.query.event.process.EventProcessInstanceDto;
-import io.camunda.optimize.dto.optimize.query.event.process.EventProcessPublishStateDto;
-import io.camunda.optimize.dto.optimize.query.event.process.EventProcessRoleRequestDto;
-import io.camunda.optimize.dto.optimize.query.event.process.db.DbEventProcessMappingDto;
 import io.camunda.optimize.dto.optimize.query.report.single.configuration.AggregationDto;
 import io.camunda.optimize.dto.optimize.query.variable.VariableUpdateInstanceDto;
 import io.camunda.optimize.service.db.schema.OptimizeIndexNameService;
 import io.camunda.optimize.service.db.schema.ScriptData;
 import io.camunda.optimize.service.db.schema.index.IndexMappingCreatorBuilder;
 import io.camunda.optimize.service.db.schema.index.VariableUpdateInstanceIndex;
-import io.camunda.optimize.service.db.schema.index.events.CamundaActivityEventIndex;
-import io.camunda.optimize.service.db.schema.index.events.EventIndex;
-import io.camunda.optimize.service.db.schema.index.events.EventProcessInstanceIndex;
 import io.camunda.optimize.service.util.configuration.ConfigurationService;
 import io.camunda.optimize.service.util.configuration.DatabaseType;
 import io.camunda.optimize.test.it.extension.db.DatabaseTestService;
@@ -57,15 +41,11 @@ import io.camunda.optimize.test.repository.TestIndexRepository;
 import io.camunda.zeebe.protocol.record.value.BpmnElementType;
 import java.io.IOException;
 import java.time.OffsetDateTime;
-import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import lombok.SneakyThrows;
 import lombok.extern.slf4j.Slf4j;
 import org.apache.commons.text.StringSubstitutor;
@@ -193,10 +173,6 @@ public class DatabaseIntegrationTestExtension implements BeforeEachCallback, Aft
     databaseTestService.deleteAllSingleProcessReports();
   }
 
-  public void deleteExternalEventSequenceCountIndex() {
-    databaseTestService.deleteExternalEventSequenceCountIndex();
-  }
-
   public void deleteTerminatedSessionsIndex() {
     databaseTestService.deleteTerminatedSessionsIndex();
   }
@@ -231,22 +207,12 @@ public class DatabaseIntegrationTestExtension implements BeforeEachCallback, Aft
   }
 
   public List<ProcessDefinitionOptimizeDto> getAllProcessDefinitions() {
-    return Stream.concat(
-            getAllDocumentsOfIndexAs(
-                PROCESS_DEFINITION_INDEX_NAME, ProcessDefinitionOptimizeDto.class)
-                .stream(),
-            getAllDocumentsOfIndexAs(
-                EVENT_PROCESS_DEFINITION_INDEX_NAME, ProcessDefinitionOptimizeDto.class)
-                .stream())
-        .toList();
+    return getAllDocumentsOfIndexAs(
+        PROCESS_DEFINITION_INDEX_NAME, ProcessDefinitionOptimizeDto.class);
   }
 
   public List<TenantDto> getAllTenants() {
     return getAllDocumentsOfIndexAs(TENANT_INDEX_NAME, TenantDto.class);
-  }
-
-  public List<EventDto> getAllStoredExternalEvents() {
-    return getAllDocumentsOfIndexAs(EXTERNAL_EVENTS_INDEX_NAME, EventDto.class);
   }
 
   public List<DecisionInstanceDto> getAllDecisionInstances() {
@@ -255,69 +221,6 @@ public class DatabaseIntegrationTestExtension implements BeforeEachCallback, Aft
 
   public List<ProcessInstanceDto> getAllProcessInstances() {
     return getAllDocumentsOfIndexAs(PROCESS_INSTANCE_MULTI_ALIAS, ProcessInstanceDto.class);
-  }
-
-  @SneakyThrows
-  public List<CamundaActivityEventDto> getAllStoredCamundaActivityEventsForDefinition(
-      final String processDefinitionKey) {
-    return getAllDocumentsOfIndexAs(
-        CamundaActivityEventIndex.constructIndexName(processDefinitionKey),
-        CamundaActivityEventDto.class);
-  }
-
-  public EventProcessDefinitionDto addEventProcessDefinitionDtoToDatabase(final String key) {
-    return addEventProcessDefinitionDtoToDatabase(key, "eventProcess-" + key);
-  }
-
-  public EventProcessDefinitionDto addEventProcessDefinitionDtoToDatabase(
-      final String key, final String name) {
-    return addEventProcessDefinitionDtoToDatabase(
-        key,
-        name,
-        null,
-        Collections.singletonList(new IdentityDto(DEFAULT_USERNAME, IdentityType.USER)));
-  }
-
-  public EventProcessDefinitionDto addEventProcessDefinitionDtoToDatabase(
-      final String key, final IdentityDto identityDto) {
-    return addEventProcessDefinitionDtoToDatabase(
-        key, "eventProcess-" + key, null, Collections.singletonList(identityDto));
-  }
-
-  public EventProcessDefinitionDto addEventProcessDefinitionDtoToDatabase(
-      final String key,
-      final String name,
-      final String version,
-      final List<IdentityDto> identityDtos) {
-    final List<EventProcessRoleRequestDto<IdentityDto>> roles =
-        identityDtos.stream()
-            .filter(Objects::nonNull)
-            .map(identityDto -> new IdentityDto(identityDto.getId(), identityDto.getType()))
-            .map(EventProcessRoleRequestDto::new)
-            .collect(Collectors.toList());
-    final DbEventProcessMappingDto eventProcessMappingDto =
-        DbEventProcessMappingDto.builder().id(key).roles(roles).build();
-    addEntryToDatabase(
-        EVENT_PROCESS_MAPPING_INDEX_NAME, eventProcessMappingDto.getId(), eventProcessMappingDto);
-
-    final String versionValue = Optional.ofNullable(version).orElse("1");
-    final EventProcessDefinitionDto eventProcessDefinitionDto =
-        EventProcessDefinitionDto.eventProcessBuilder()
-            .id(key + "-" + version)
-            .key(key)
-            .name(name)
-            .version(versionValue)
-            .bpmn20Xml(key + versionValue)
-            .deleted(false)
-            .onboarded(true)
-            .flowNodeData(new ArrayList<>())
-            .userTaskNames(Collections.emptyMap())
-            .build();
-    addEntryToDatabase(
-        EVENT_PROCESS_DEFINITION_INDEX_NAME,
-        eventProcessDefinitionDto.getId(),
-        eventProcessDefinitionDto);
-    return eventProcessDefinitionDto;
   }
 
   @SneakyThrows
@@ -330,10 +233,6 @@ public class DatabaseIntegrationTestExtension implements BeforeEachCallback, Aft
   public List<VariableUpdateInstanceDto> getAllStoredVariableUpdateInstanceDtos() {
     return getAllDocumentsOfIndexAs(
         VARIABLE_UPDATE_INSTANCE_INDEX_NAME + "_*", VariableUpdateInstanceDto.class);
-  }
-
-  public void deleteAllExternalEventIndices() {
-    databaseTestService.deleteAllExternalEventIndices();
   }
 
   @SneakyThrows
@@ -398,31 +297,6 @@ public class DatabaseIntegrationTestExtension implements BeforeEachCallback, Aft
 
   public boolean zeebeIndexExists(final String expectedIndex) {
     return databaseTestService.zeebeIndexExists(expectedIndex);
-  }
-
-  public void updateEventProcessRoles(
-      final String eventProcessId, final List<IdentityDto> identityDtos) {
-    databaseTestService.updateEventProcessRoles(eventProcessId, identityDtos);
-  }
-
-  public Map<String, Set<String>> getEventProcessInstanceIndicesWithAliasesFromDatabase() {
-    return databaseTestService.getEventProcessInstanceIndicesWithAliasesFromDatabase();
-  }
-
-  public Optional<EventProcessPublishStateDto> getEventProcessPublishStateDtoFromDatabase(
-      final String processMappingId) {
-    return databaseTestService.getEventProcessPublishStateDtoFromDatabase(processMappingId);
-  }
-
-  public Optional<EventProcessDefinitionDto> getEventProcessDefinitionFromDatabase(
-      final String definitionId) {
-    return databaseTestService.getEventProcessDefinitionFromDatabase(definitionId);
-  }
-
-  public List<EventProcessInstanceDto> getEventProcessInstancesFromDatabaseForProcessPublishStateId(
-      final String publishStateId) {
-    return databaseTestService.getEventProcessInstancesFromDatabaseForProcessPublishStateId(
-        publishStateId);
   }
 
   public List<ProcessInstanceDto> getProcessInstancesById(final List<String> instanceIds) {
@@ -517,11 +391,6 @@ public class DatabaseIntegrationTestExtension implements BeforeEachCallback, Aft
     return databaseTestService.getImportedActivityCount();
   }
 
-  public void removeStoredOrderCountersForDefinitionKey(final String definitionKey) {
-    final ScriptData scriptData = new ScriptData(Map.of(), "ctx._source.orderCounter = null");
-    databaseTestService.removeStoredOrderCountersForDefinitionKey(definitionKey, scriptData);
-  }
-
   public List<String> getAllIndicesWithWriteAlias(final String externalProcessVariableIndexName) {
     final String aliasNameWithPrefix =
         getIndexNameService().getOptimizeIndexAliasForIndex(externalProcessVariableIndexName);
@@ -535,10 +404,6 @@ public class DatabaseIntegrationTestExtension implements BeforeEachCallback, Aft
     return databaseTestService.getAllIndicesWithReadOnlyAlias(aliasNameWithPrefix);
   }
 
-  public void deleteTraceStateImportIndexForDefinitionKey(final String definitionKey) {
-    databaseTestService.deleteTraceStateImportIndexForDefinitionKey(definitionKey);
-  }
-
   public void verifyThatAllDocumentsOfIndexAreRelatedToRunningInstancesOnly(
       final String entityIndex,
       final String processInstanceField,
@@ -549,14 +414,6 @@ public class DatabaseIntegrationTestExtension implements BeforeEachCallback, Aft
 
   public Integer getVariableInstanceCount(final String variableName) {
     return databaseTestService.getVariableInstanceCount(variableName);
-  }
-
-  public EventProcessInstanceIndex getEventInstanceIndex(final String indexId) {
-    return databaseTestService.getEventInstanceIndex(indexId);
-  }
-
-  public EventIndex getEventIndex() {
-    return databaseTestService.getEventIndex();
   }
 
   public VariableUpdateInstanceIndex getVariableUpdateInstanceIndex() {

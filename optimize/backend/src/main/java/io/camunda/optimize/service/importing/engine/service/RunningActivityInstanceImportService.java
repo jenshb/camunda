@@ -10,7 +10,6 @@ package io.camunda.optimize.service.importing.engine.service;
 import io.camunda.optimize.dto.engine.HistoricActivityInstanceEngineDto;
 import io.camunda.optimize.dto.optimize.importing.FlowNodeEventDto;
 import io.camunda.optimize.rest.engine.EngineContext;
-import io.camunda.optimize.service.CamundaEventImportService;
 import io.camunda.optimize.service.db.DatabaseClient;
 import io.camunda.optimize.service.db.writer.activity.RunningActivityInstanceWriter;
 import io.camunda.optimize.service.importing.DatabaseImportJob;
@@ -32,23 +31,20 @@ public class RunningActivityInstanceImportService
   protected DatabaseImportJobExecutor databaseImportJobExecutor;
   protected EngineContext engineContext;
   private final RunningActivityInstanceWriter runningActivityInstanceWriter;
-  private final CamundaEventImportService camundaEventService;
   private final ProcessDefinitionResolverService processDefinitionResolverService;
   private final ConfigurationService configurationService;
   private final DatabaseClient databaseClient;
 
   public RunningActivityInstanceImportService(
       final RunningActivityInstanceWriter runningActivityInstanceWriter,
-      final CamundaEventImportService camundaEventService,
       final EngineContext engineContext,
       final ConfigurationService configurationService,
       final ProcessDefinitionResolverService processDefinitionResolverService,
       final DatabaseClient databaseClient) {
-    this.databaseImportJobExecutor =
+    databaseImportJobExecutor =
         new DatabaseImportJobExecutor(getClass().getSimpleName(), configurationService);
     this.engineContext = engineContext;
     this.runningActivityInstanceWriter = runningActivityInstanceWriter;
-    this.camundaEventService = camundaEventService;
     this.processDefinitionResolverService = processDefinitionResolverService;
     this.configurationService = configurationService;
     this.databaseClient = databaseClient;
@@ -56,15 +52,15 @@ public class RunningActivityInstanceImportService
 
   @Override
   public void executeImport(
-      List<HistoricActivityInstanceEngineDto> pageOfEngineEntities,
-      Runnable importCompleteCallback) {
+      final List<HistoricActivityInstanceEngineDto> pageOfEngineEntities,
+      final Runnable importCompleteCallback) {
     logger.trace("Importing running activity instances from engine...");
 
-    boolean newDataIsAvailable = !pageOfEngineEntities.isEmpty();
+    final boolean newDataIsAvailable = !pageOfEngineEntities.isEmpty();
     if (newDataIsAvailable) {
-      List<FlowNodeEventDto> newOptimizeEntities =
+      final List<FlowNodeEventDto> newOptimizeEntities =
           mapEngineEntitiesToOptimizeEntities(pageOfEngineEntities);
-      DatabaseImportJob<FlowNodeEventDto> databaseImportJob =
+      final DatabaseImportJob<FlowNodeEventDto> databaseImportJob =
           createDatabaseImportJob(newOptimizeEntities, importCompleteCallback);
       addDatabaseImportJobToQueue(databaseImportJob);
     }
@@ -75,12 +71,12 @@ public class RunningActivityInstanceImportService
     return databaseImportJobExecutor;
   }
 
-  private void addDatabaseImportJobToQueue(DatabaseImportJob databaseImportJob) {
+  private void addDatabaseImportJobToQueue(final DatabaseImportJob databaseImportJob) {
     databaseImportJobExecutor.executeImportJob(databaseImportJob);
   }
 
   private List<FlowNodeEventDto> mapEngineEntitiesToOptimizeEntities(
-      List<HistoricActivityInstanceEngineDto> engineEntities) {
+      final List<HistoricActivityInstanceEngineDto> engineEntities) {
     return engineEntities.stream()
         .map(
             activity ->
@@ -98,20 +94,16 @@ public class RunningActivityInstanceImportService
   }
 
   private DatabaseImportJob<FlowNodeEventDto> createDatabaseImportJob(
-      List<FlowNodeEventDto> events, Runnable callback) {
-    RunningActivityInstanceDatabaseImportJob activityImportJob =
+      final List<FlowNodeEventDto> events, final Runnable callback) {
+    final RunningActivityInstanceDatabaseImportJob activityImportJob =
         new RunningActivityInstanceDatabaseImportJob(
-            runningActivityInstanceWriter,
-            camundaEventService,
-            configurationService,
-            callback,
-            databaseClient);
+            runningActivityInstanceWriter, configurationService, callback, databaseClient);
     activityImportJob.setEntitiesToImport(events);
     return activityImportJob;
   }
 
   private Optional<FlowNodeEventDto> mapEngineEntityToOptimizeEntity(
-      HistoricActivityInstanceEngineDto engineEntity) {
+      final HistoricActivityInstanceEngineDto engineEntity) {
     return processDefinitionResolverService
         .getDefinition(engineEntity.getProcessDefinitionId(), engineContext)
         .map(

@@ -9,7 +9,6 @@ package io.camunda.optimize.service.importing.job;
 
 import io.camunda.optimize.dto.optimize.ImportRequestDto;
 import io.camunda.optimize.dto.optimize.ProcessInstanceDto;
-import io.camunda.optimize.service.CamundaEventImportService;
 import io.camunda.optimize.service.db.DatabaseClient;
 import io.camunda.optimize.service.db.repository.ProcessInstanceRepository;
 import io.camunda.optimize.service.db.writer.CompletedProcessInstanceWriter;
@@ -21,28 +20,23 @@ public class CompletedProcessInstanceDatabaseImportJob
     extends DatabaseImportJob<ProcessInstanceDto> {
 
   private final CompletedProcessInstanceWriter completedProcessInstanceWriter;
-  private final CamundaEventImportService camundaEventService;
   private final ProcessInstanceRepository processInstanceRepository;
 
   public CompletedProcessInstanceDatabaseImportJob(
       final CompletedProcessInstanceWriter completedProcessInstanceWriter,
-      final CamundaEventImportService camundaEventService,
       final Runnable importCompleteCallback,
       final DatabaseClient databaseClient,
       final ProcessInstanceRepository processInstanceRepository) {
     super(importCompleteCallback, databaseClient);
     this.completedProcessInstanceWriter = completedProcessInstanceWriter;
-    this.camundaEventService = camundaEventService;
     this.processInstanceRepository = processInstanceRepository;
   }
 
   @Override
-  protected void persistEntities(List<ProcessInstanceDto> completedProcessInstances) {
-    List<ImportRequestDto> imports = new ArrayList<>();
+  protected void persistEntities(final List<ProcessInstanceDto> completedProcessInstances) {
+    final List<ImportRequestDto> imports = new ArrayList<>();
     imports.addAll(
         completedProcessInstanceWriter.generateProcessInstanceImports(completedProcessInstances));
-    imports.addAll(
-        camundaEventService.generateCompletedProcessInstanceImports(completedProcessInstances));
     processInstanceRepository.bulkImport("Completed process instances", imports);
   }
 }

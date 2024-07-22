@@ -8,7 +8,7 @@
 package io.camunda.optimize.service.importing.job;
 
 import io.camunda.optimize.dto.optimize.ImportRequestDto;
-import io.camunda.optimize.dto.optimize.query.event.process.FlowNodeInstanceDto;
+import io.camunda.optimize.dto.optimize.query.process.FlowNodeInstanceDto;
 import io.camunda.optimize.service.db.DatabaseClient;
 import io.camunda.optimize.service.db.writer.usertask.CompletedUserTaskInstanceWriter;
 import io.camunda.optimize.service.importing.DatabaseImportJob;
@@ -31,7 +31,7 @@ public class CompletedUserTasksDatabaseImportJob extends DatabaseImportJob<FlowN
   }
 
   @Override
-  protected void persistEntities(List<FlowNodeInstanceDto> newOptimizeEntities) {
+  protected void persistEntities(final List<FlowNodeInstanceDto> newOptimizeEntities) {
     final List<ImportRequestDto> importRequests =
         completedUserTaskInstanceWriter.generateUserTaskImports(newOptimizeEntities);
     databaseClient.executeImportRequestsAsBulk(
