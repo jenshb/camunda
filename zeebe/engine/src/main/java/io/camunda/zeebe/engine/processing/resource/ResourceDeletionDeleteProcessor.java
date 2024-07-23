@@ -215,6 +215,7 @@ public class ResourceDeletionDeleteProcessor
             .setKey(process.getKey())
             .setResourceName(process.getResourceName())
             .setTenantId(process.getTenantId());
+    // TODO set deployment key
     stateWriter.appendFollowUpEvent(keyGenerator.nextKey(), ProcessIntent.DELETING, processRecord);
 
     final String processId = processRecord.getBpmnProcessId();
@@ -301,8 +302,8 @@ public class ResourceDeletionDeleteProcessor
             .setResourceName(persistedForm.getResourceName())
             .setResource(persistedForm.getResource())
             .setChecksum(persistedForm.getChecksum())
-            .setVersion(persistedForm.getVersion());
-    // TODO set deployment key
+            .setVersion(persistedForm.getVersion())
+            .setDeploymentKey(persistedForm.getDeploymentKey());
 
     stateWriter.appendFollowUpEvent(keyGenerator.nextKey(), FormIntent.DELETED, form);
   }
