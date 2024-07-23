@@ -302,6 +302,7 @@ public class ResourceDeletionDeleteProcessor
             .setResource(persistedForm.getResource())
             .setChecksum(persistedForm.getChecksum())
             .setVersion(persistedForm.getVersion());
+    // TODO set deployment key
 
     stateWriter.appendFollowUpEvent(keyGenerator.nextKey(), FormIntent.DELETED, form);
   }

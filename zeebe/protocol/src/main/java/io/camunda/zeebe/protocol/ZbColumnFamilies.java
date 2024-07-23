@@ -173,7 +173,8 @@ public enum ZbColumnFamilies implements EnumValue {
 
   // TODO move to top?
   PROCESS_CACHE_BY_ID_AND_DEPLOYMENT_KEY(82),
-  DMN_DECISION_KEY_BY_DECISION_ID_AND_DEPLOYMENT_KEY(83);
+  DMN_DECISION_KEY_BY_DECISION_ID_AND_DEPLOYMENT_KEY(83),
+  FORM_BY_ID_AND_DEPLOYMENT_KEY(84);
 
   private final int value;
 
