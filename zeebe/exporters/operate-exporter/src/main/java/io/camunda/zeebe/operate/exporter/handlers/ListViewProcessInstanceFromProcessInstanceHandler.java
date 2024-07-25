@@ -17,12 +17,11 @@ import io.camunda.operate.cache.ProcessCache;
 import io.camunda.operate.entities.OperationType;
 import io.camunda.operate.entities.listview.ProcessInstanceForListViewEntity;
 import io.camunda.operate.entities.listview.ProcessInstanceState;
+import io.camunda.operate.exceptions.OperateRuntimeException;
 import io.camunda.operate.exceptions.PersistenceException;
 import io.camunda.operate.schema.templates.ListViewTemplate;
-import io.camunda.operate.store.BatchRequest;
 import io.camunda.operate.store.FlowNodeStore;
 import io.camunda.operate.store.ListViewStore;
-import io.camunda.operate.store.MetricsStore;
 import io.camunda.operate.store.elasticsearch.NewElasticsearchBatchRequest;
 import io.camunda.operate.util.*;
 import io.camunda.operate.zeebeimport.ImportBatch;
@@ -53,32 +52,12 @@ public class ListViewProcessInstanceFromProcessInstanceHandler
 
   private final ListViewTemplate listViewTemplate;
   private final boolean concurrencyMode;
-  private final OperationsManager operationsManager;
-  private final ProcessCache processCache;
-  private final ImportBatch importBatch;
-  private final MetricsStore metricsStore;
-  private final ListViewStore listViewStore;
-  private final FlowNodeStore flowNodeStore;
-
-  private final Map<String, Record<ProcessInstanceRecordValue>> recordsMap = new HashMap<>();
 
   public ListViewProcessInstanceFromProcessInstanceHandler(
       ListViewTemplate listViewTemplate,
-      boolean concurrencyMode,
-      OperationsManager operationsManager,
-      ProcessCache processCache,
-      ImportBatch importBatch,
-      MetricsStore metricsStore,
-      ListViewStore listViewStore,
-      FlowNodeStore flowNodeStore) {
+      boolean concurrencyMode) {
     this.listViewTemplate = listViewTemplate;
     this.concurrencyMode = concurrencyMode;
-    this.operationsManager = operationsManager;
-    this.processCache = processCache;
-    this.importBatch = importBatch;
-    this.metricsStore = metricsStore;
-    this.listViewStore = listViewStore;
-    this.flowNodeStore = flowNodeStore;
   }
 
   @Override
@@ -93,10 +72,14 @@ public class ListViewProcessInstanceFromProcessInstanceHandler
 
   @Override
   public boolean handlesRecord(Record<ProcessInstanceRecordValue> record) {
-    final var intent = record.getIntent().name();
-    return PI_AND_AI_START_STATES.contains(intent)
-        || PI_AND_AI_FINISH_STATES.contains(intent)
-        || ELEMENT_MIGRATED.name().equals(intent);
+    final var recordValue = record.getValue();
+    if (isProcessEvent(recordValue)) {
+      final var intent = record.getIntent().name();
+      return PI_AND_AI_START_STATES.contains(intent)
+          || PI_AND_AI_FINISH_STATES.contains(intent)
+          || ELEMENT_MIGRATED.name().equals(intent);
+    }
+    return false;
   }
 
   @Override
@@ -112,43 +95,14 @@ public class ListViewProcessInstanceFromProcessInstanceHandler
   @Override
   public void updateEntity(
       Record<ProcessInstanceRecordValue> record, ProcessInstanceForListViewEntity entity) {
-
-    final var recordValue = record.getValue();
-    if (isProcessEvent(recordValue)) {
-      updateProcessInstance(entity, record);
-      recordsMap.put(entity.getId(), record);
-    }
+    updateProcessInstance(entity, record);
+    completeOperation(record);
   }
 
   @Override
   public void flush(
       ProcessInstanceForListViewEntity entity, NewElasticsearchBatchRequest batchRequest)
       throws PersistenceException {
-
-    final String id = entity.getId();
-    final Record<ProcessInstanceRecordValue> record = recordsMap.get(id);
-    if (record != null) {
-      final var recordValue = record.getValue();
-      if (isProcessEvent(recordValue)) {
-        // complete operation
-        if (isProcessInstanceTerminated(record)) {
-          // resolve corresponding operation
-          operationsManager.completeOperation(
-              null, record.getKey(), null, OperationType.CANCEL_PROCESS_INSTANCE, batchRequest);
-        } else if (isProcessInstanceMigrated(record)) {
-          // resolve corresponding operation
-          operationsManager.completeOperation(
-              null, record.getKey(), null, OperationType.MIGRATE_PROCESS_INSTANCE, batchRequest);
-        }
-        recordsMap.remove(id);
-
-        final boolean isRootProcessInstance =
-            recordValue.getParentProcessInstanceKey() == EMPTY_PARENT_PROCESS_INSTANCE_ID;
-        if (isRootProcessInstance) {
-          registerStartedRootProcessInstance(entity, batchRequest, entity.getStartDate());
-        }
-      }
-    }
 
     final Map<String, Object> updateFields = new HashMap<>();
     if (entity.getStartDate() != null) {
@@ -202,16 +156,15 @@ public class ListViewProcessInstanceFromProcessInstanceHandler
         .setProcessDefinitionKey(recordValue.getProcessDefinitionKey())
         .setBpmnProcessId(recordValue.getBpmnProcessId())
         .setProcessVersion(recordValue.getVersion())
-        .setProcessName(
-            processCache.getProcessNameOrDefaultValue(
-                piEntity.getProcessDefinitionKey(), recordValue.getBpmnProcessId()));
+        .setProcessName(getProcessName(
+            piEntity.getProcessDefinitionKey(), recordValue.getBpmnProcessId()));
 
     final OffsetDateTime timestamp =
         DateUtil.toOffsetDateTime(Instant.ofEpochMilli(record.getTimestamp()));
     final boolean isRootProcessInstance =
         recordValue.getParentProcessInstanceKey() == EMPTY_PARENT_PROCESS_INSTANCE_ID;
     if (intentStr.equals(ELEMENT_COMPLETED.name()) || intentStr.equals(ELEMENT_TERMINATED.name())) {
-      importBatch.incrementFinishedWiCount();
+      incrementFinishedCount();
       piEntity.setEndDate(timestamp);
       if (intentStr.equals(ELEMENT_TERMINATED.name())) {
         piEntity.setState(ProcessInstanceState.CANCELED);
@@ -241,52 +194,6 @@ public class ListViewProcessInstanceFromProcessInstanceHandler
       piEntity.setTreePath(treePath);
     }
     return piEntity;
-  }
-
-  private void registerStartedRootProcessInstance(
-      final ProcessInstanceForListViewEntity piEntity,
-      final BatchRequest batchRequest,
-      final OffsetDateTime timestamp)
-      throws PersistenceException {
-    final String processInstanceKey = String.valueOf(piEntity.getProcessInstanceKey());
-    metricsStore.registerProcessInstanceStartEvent(
-        processInstanceKey, piEntity.getTenantId(), timestamp, batchRequest);
-  }
-
-  private String getTreePathForCalledProcess(final ProcessInstanceRecordValue recordValue) {
-    final String parentTreePath =
-        listViewStore.findProcessInstanceTreePathFor(recordValue.getParentProcessInstanceKey());
-
-    if (parentTreePath != null) {
-      final String flowNodeInstanceId =
-          ConversionUtils.toStringOrNull(recordValue.getParentElementInstanceKey());
-      final String callActivityId = getCallActivityId(flowNodeInstanceId);
-      final String treePath =
-          new TreePath(parentTreePath)
-              .appendEntries(
-                  callActivityId,
-                  flowNodeInstanceId,
-                  ConversionUtils.toStringOrNull(recordValue.getProcessInstanceKey()))
-              .toString();
-
-      return treePath;
-    } else {
-      LOGGER.warn(
-          "Unable to find parent tree path for parent instance id "
-              + recordValue.getParentProcessInstanceKey());
-      final String treePath =
-          new TreePath()
-              .startTreePath(ConversionUtils.toStringOrNull(recordValue.getProcessInstanceKey()))
-              .toString();
-
-      return treePath;
-    }
-  }
-
-  private String getCallActivityId(final String flowNodeInstanceId) {
-    final String callActivityId =
-        flowNodeStore.getFlowNodeIdByFlowNodeInstanceId(flowNodeInstanceId);
-    return callActivityId;
   }
 
   private boolean isProcessEvent(final ProcessInstanceRecordValue recordValue) {
@@ -344,5 +251,86 @@ public class ListViewProcessInstanceFromProcessInstanceHandler
         STATE,
         STATE,
         STATE);
+  }
+
+
+  /// TODO - because it depends on importBatch
+  private void incrementFinishedCount() {
+    ImportBatch importBatch = null;
+    if (importBatch == null) {
+      return;
+    }
+    importBatch.incrementFinishedWiCount();
+  }
+
+  /// TODO - because it depends on listViewStore and flowNodeStore
+  private String getTreePathForCalledProcess(final ProcessInstanceRecordValue recordValue) {
+
+    ListViewStore listViewStore = null;
+    FlowNodeStore flowNodeStore = null;
+    if (listViewStore == null || flowNodeStore == null) {
+      return null;
+    }
+
+    final String parentTreePath =
+        listViewStore.findProcessInstanceTreePathFor(recordValue.getParentProcessInstanceKey());
+
+    if (parentTreePath != null) {
+      final String flowNodeInstanceId =
+          ConversionUtils.toStringOrNull(recordValue.getParentElementInstanceKey());
+      final String callActivityId = flowNodeStore.getFlowNodeIdByFlowNodeInstanceId(flowNodeInstanceId);
+      final String treePath =
+          new TreePath(parentTreePath)
+              .appendEntries(
+                  callActivityId,
+                  flowNodeInstanceId,
+                  ConversionUtils.toStringOrNull(recordValue.getProcessInstanceKey()))
+              .toString();
+
+      return treePath;
+    } else {
+      LOGGER.warn(
+          "Unable to find parent tree path for parent instance id "
+              + recordValue.getParentProcessInstanceKey());
+      final String treePath =
+          new TreePath()
+              .startTreePath(ConversionUtils.toStringOrNull(recordValue.getProcessInstanceKey()))
+              .toString();
+
+      return treePath;
+    }
+  }
+
+  /// TODO - because it depends on operationsManager
+  private void completeOperation(Record<ProcessInstanceRecordValue> record) {
+    OperationsManager operationsManager = null;
+    if (operationsManager == null) {
+      return;
+    }
+    try {
+      NewElasticsearchBatchRequest batchRequest = null;
+      if (isProcessInstanceTerminated(record)) {
+        // resolve corresponding operation
+        operationsManager.completeOperation(
+            null, record.getKey(), null, OperationType.CANCEL_PROCESS_INSTANCE, batchRequest);
+      } else if (isProcessInstanceMigrated(record)) {
+        // resolve corresponding operation
+        operationsManager.completeOperation(
+            null, record.getKey(), null, OperationType.MIGRATE_PROCESS_INSTANCE, batchRequest);
+      }
+    } catch (PersistenceException ex) {
+      throw new OperateRuntimeException(ex);
+    }
+  }
+
+  /// TODO - because it depends on processCache
+  private String getProcessName(Long processDefinitionKey, String bpmnProcessId) {
+    ProcessCache processCache = null;
+    if (processCache == null) {
+      return bpmnProcessId;
+    } else {
+      return processCache.getProcessNameOrDefaultValue(
+          processDefinitionKey, bpmnProcessId);
+    }
   }
 }
