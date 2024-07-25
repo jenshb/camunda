@@ -54,8 +54,7 @@ public class ListViewProcessInstanceFromProcessInstanceHandler
   private final boolean concurrencyMode;
 
   public ListViewProcessInstanceFromProcessInstanceHandler(
-      ListViewTemplate listViewTemplate,
-      boolean concurrencyMode) {
+      ListViewTemplate listViewTemplate, boolean concurrencyMode) {
     this.listViewTemplate = listViewTemplate;
     this.concurrencyMode = concurrencyMode;
   }
@@ -156,8 +155,8 @@ public class ListViewProcessInstanceFromProcessInstanceHandler
         .setProcessDefinitionKey(recordValue.getProcessDefinitionKey())
         .setBpmnProcessId(recordValue.getBpmnProcessId())
         .setProcessVersion(recordValue.getVersion())
-        .setProcessName(getProcessName(
-            piEntity.getProcessDefinitionKey(), recordValue.getBpmnProcessId()));
+        .setProcessName(
+            getProcessName(piEntity.getProcessDefinitionKey(), recordValue.getBpmnProcessId()));
 
     final OffsetDateTime timestamp =
         DateUtil.toOffsetDateTime(Instant.ofEpochMilli(record.getTimestamp()));
@@ -253,21 +252,20 @@ public class ListViewProcessInstanceFromProcessInstanceHandler
         STATE);
   }
 
-
   /// TODO - because it depends on importBatch
   private void incrementFinishedCount() {
-    ImportBatch importBatch = null;
+    final ImportBatch importBatch = null;
     if (importBatch == null) {
       return;
     }
+
     importBatch.incrementFinishedWiCount();
   }
 
   /// TODO - because it depends on listViewStore and flowNodeStore
   private String getTreePathForCalledProcess(final ProcessInstanceRecordValue recordValue) {
-
-    ListViewStore listViewStore = null;
-    FlowNodeStore flowNodeStore = null;
+    final ListViewStore listViewStore = null;
+    final FlowNodeStore flowNodeStore = null;
     if (listViewStore == null || flowNodeStore == null) {
       return null;
     }
@@ -278,7 +276,8 @@ public class ListViewProcessInstanceFromProcessInstanceHandler
     if (parentTreePath != null) {
       final String flowNodeInstanceId =
           ConversionUtils.toStringOrNull(recordValue.getParentElementInstanceKey());
-      final String callActivityId = flowNodeStore.getFlowNodeIdByFlowNodeInstanceId(flowNodeInstanceId);
+      final String callActivityId =
+          flowNodeStore.getFlowNodeIdByFlowNodeInstanceId(flowNodeInstanceId);
       final String treePath =
           new TreePath(parentTreePath)
               .appendEntries(
@@ -301,14 +300,15 @@ public class ListViewProcessInstanceFromProcessInstanceHandler
     }
   }
 
-  /// TODO - because it depends on operationsManager
+  /// TODO - because it depends on operationsManager and batchRequest
   private void completeOperation(Record<ProcessInstanceRecordValue> record) {
-    OperationsManager operationsManager = null;
-    if (operationsManager == null) {
+    final OperationsManager operationsManager = null;
+    final NewElasticsearchBatchRequest batchRequest = null;
+    if (operationsManager == null || batchRequest == null) {
       return;
     }
+
     try {
-      NewElasticsearchBatchRequest batchRequest = null;
       if (isProcessInstanceTerminated(record)) {
         // resolve corresponding operation
         operationsManager.completeOperation(
@@ -325,12 +325,11 @@ public class ListViewProcessInstanceFromProcessInstanceHandler
 
   /// TODO - because it depends on processCache
   private String getProcessName(Long processDefinitionKey, String bpmnProcessId) {
-    ProcessCache processCache = null;
+    final ProcessCache processCache = null;
     if (processCache == null) {
       return bpmnProcessId;
-    } else {
-      return processCache.getProcessNameOrDefaultValue(
-          processDefinitionKey, bpmnProcessId);
     }
+
+    return processCache.getProcessNameOrDefaultValue(processDefinitionKey, bpmnProcessId);
   }
 }

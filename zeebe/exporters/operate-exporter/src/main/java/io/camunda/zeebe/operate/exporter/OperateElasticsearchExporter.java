@@ -176,6 +176,10 @@ public class OperateElasticsearchExporter implements Exporter {
                 (ListViewTemplate) new ListViewTemplate().setIndexPrefix(indexPrefix),
                 concurrencyMode))
         .withHandler(
+            new ListViewProcessInstanceFromProcessInstanceHandler(
+                (ListViewTemplate) new ListViewTemplate().setIndexPrefix(indexPrefix),
+                concurrencyMode))
+        .withHandler(
             new ListViewVariableFromVariableHandler(
                 (ListViewTemplate) new ListViewTemplate().setIndexPrefix(indexPrefix),
                 concurrencyMode))
