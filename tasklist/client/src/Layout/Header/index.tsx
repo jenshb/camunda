@@ -20,6 +20,7 @@ import {themeStore} from 'modules/stores/theme';
 import {useCurrentUser} from 'modules/queries/useCurrentUser';
 import {getStateLocally} from 'modules/utils/localStorage';
 import styles from './styles.module.scss';
+import { IS_INTERNATIONALIZATION_ENABLED } from 'modules/featureFlags';
 
 function getInfoSidebarItems(isPaidPlan: boolean) {
 
@@ -310,6 +311,10 @@ const Header: React.FC = observer(() => {
 
 const LanguageSelector: React.FC = observer(() => {
   const { i18n, t } = useTranslation();
+
+  if (!IS_INTERNATIONALIZATION_ENABLED) {
+    return null;
+  }
 
   const languageItems = [
     { id: 'en', label: 'English' },
